@@ -14,7 +14,7 @@
 #include "ui/settings_window.h"
 #include "ui/tray.h"
 
-#define APP_ID "org.businessgaberino.scrollmymarbles"
+#define APP_ID "org.ridgebridgestudios.scrollmymarbles"
 #define APP_VERSION "1.0.0"
 
 typedef struct {

@@ -204,7 +204,7 @@ static void on_reset_defaults_clicked(GtkButton *btn, gpointer user_data) {
 }
 
 void settings_window_show_about(GtkWindow *parent) {
-    const char *developers[] = { "businessgaberino-commits", "Spitfire_x86 (original TBScroll)", NULL };
+    const char *developers[] = { "RidgeBridgeStudios", "Spitfire_x86 (original TBScroll)", NULL };
 
     adw_show_about_dialog(
         GTK_WIDGET(parent),

@@ -1,13 +1,13 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: scroll-my-marbles
-Source: https://github.com/businessgaberino-commits/scroll-my-marbles
+Source: https://github.com/RidgeBridgeStudios/scroll-my-marbles
 
 Files: *
-Copyright: 2026 businessgaberino-commits
+Copyright: 2026 RidgeBridgeStudios
 License: MIT
 
 Files: src/core/scroll_engine.*
-Copyright: 2026 businessgaberino-commits
+Copyright: 2026 RidgeBridgeStudios
            2021 Spitfire_x86 (original TBScroll logic)
 License: MIT
 

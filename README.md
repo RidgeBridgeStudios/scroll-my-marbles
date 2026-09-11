@@ -249,5 +249,5 @@ Button2Action=PassThrough
 
 ## License
 
-MIT License. Copyright (c) 2026 businessgaberino-commits.  
+MIT License. Copyright (c) 2026 RidgeBridgeStudios.  
 Original TBScroll Windows logic copyright (c) 2021 Spitfire_x86.

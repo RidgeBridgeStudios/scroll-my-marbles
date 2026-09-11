@@ -10,4 +10,4 @@ scroll-my-marbles (1.0.0) stable; urgency=medium
   * Added native StatusNotifierItem / DBus system tray indicator.
   * Added udev rules for unprivileged access.
 
- -- businessgaberino-commits <contact@example.com>  Fri, 11 Sep 2026 21:00:00 +0200
+ -- RidgeBridgeStudios <contact@example.com>  Fri, 11 Sep 2026 21:00:00 +0200
