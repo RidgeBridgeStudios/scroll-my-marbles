@@ -8,9 +8,6 @@
 #include "core/scroll_engine.h"
 #include "config/config.h"
 
-struct DeviceContext {
-    int dummy;
-};
 
 /* Mock device context for testing event emission */
 typedef struct {

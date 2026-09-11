@@ -15,7 +15,7 @@ typedef struct {
     bool is_pointer;
 } DeviceInfo;
 
-typedef struct {
+typedef struct DeviceContext {
     int fd;
     struct libevdev *dev;
     struct libevdev_uinput *uidev;

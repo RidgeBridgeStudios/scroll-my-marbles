@@ -4,11 +4,7 @@
 #include "../config/config.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include <linux/input.h>
-
-typedef struct DeviceContext DeviceContext;
-void device_emit_event(DeviceContext *ctx, uint16_t type, uint16_t code, int32_t value);
-void device_emit_syn(DeviceContext *ctx);
+#include "device.h"
 
 typedef struct {
     AppConfig config;

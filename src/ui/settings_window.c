@@ -207,15 +207,15 @@ void settings_window_show_about(GtkWindow *parent) {
     const char *developers[] = { "businessgaberino-commits", "Spitfire_x86 (original TBScroll)", NULL };
 
     adw_show_about_dialog(
-        parent,
+        GTK_WIDGET(parent),
         "application-name", "Scroll My Marbles",
         "application-icon", "scroll-my-marbles",
         "developer-name", "Scroll My Marbles Team",
         "version", "1.0.0",
-        "copyright", "© 2026 businessgaberino-commits",
+        "copyright", "© 2026 RidgeBridgeStudios",
         "license-type", GTK_LICENSE_MIT_X11,
-        "website", "https://github.com/businessgaberino-commits/scroll-my-marbles",
-        "issue-url", "https://github.com/businessgaberino-commits/scroll-my-marbles/issues",
+        "website", "https://github.com/RidgeBridgeStudios/scroll-my-marbles",
+        "issue-url", "https://github.com/RidgeBridgeStudios/scroll-my-marbles/issues",
         "comments", "Native Linux scroll emulation and button remapping for pointing devices "
                     "without a dedicated scroll wheel, targeting the Logitech TrackMan Marble FX.",
         "developers", developers,

@@ -66,8 +66,27 @@ cp -a "${SCRIPT_DIR}/data/99-scroll-my-marbles.rules" "${STAGING_DIR}/lib/udev/r
 # Install icons
 cp -r "${SCRIPT_DIR}/data/icons/hicolor/"* "${STAGING_DIR}/usr/share/icons/hicolor/"
 
-# Install Debian maintainer files
-cp -a "${SCRIPT_DIR}/debian/control" "${STAGING_DIR}/DEBIAN/control"
+# Install Debian control and maintainer files
+cat << 'EOF' > "${STAGING_DIR}/DEBIAN/control"
+Package: scroll-my-marbles
+Version: 1.0.0
+Architecture: amd64
+Maintainer: RidgeBridgeStudios <contact@example.com>
+Section: utils
+Priority: optional
+Depends: libc6, libglib2.0-0t64 | libglib2.0-0, libgtk-4-1, libadwaita-1-0, libevdev2
+Recommends: udev
+Homepage: https://github.com/RidgeBridgeStudios/scroll-my-marbles
+Description: Scroll emulation and button remapping for Logitech TrackMan Marble FX
+ Scroll My Marbles provides an alternative scrolling solution for pointing
+ devices without a dedicated scroll wheel, specifically targeting the Logitech
+ TrackMan Marble FX trackball. It allows scrolling by holding a configurable
+ button and moving the trackball, with customizable sensitivities, smooth
+ high-resolution scrolling, reverse scrolling, and button remapping. It operates
+ natively at the evdev/uinput level, working seamlessly on both X11 and Wayland
+ sessions without root privileges.
+EOF
+chmod 0644 "${STAGING_DIR}/DEBIAN/control"
 [ -f "${SCRIPT_DIR}/debian/postinst" ] && cp -a "${SCRIPT_DIR}/debian/postinst" "${STAGING_DIR}/DEBIAN/postinst"
 [ -f "${SCRIPT_DIR}/debian/postrm" ]  && cp -a "${SCRIPT_DIR}/debian/postrm"  "${STAGING_DIR}/DEBIAN/postrm"
 

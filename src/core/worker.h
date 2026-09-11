@@ -5,6 +5,7 @@
 #include "scroll_engine.h"
 #include "../config/config.h"
 #include <stdbool.h>
+#include <pthread.h>
 
 typedef void (*WorkerStatusCallback)(bool connected, const char *device_name, const char *device_path, void *user_data);
 

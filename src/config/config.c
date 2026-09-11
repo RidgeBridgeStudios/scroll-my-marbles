@@ -1,5 +1,6 @@
 #include "config.h"
 #include <glib.h>
+#include <glib/gstdio.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
