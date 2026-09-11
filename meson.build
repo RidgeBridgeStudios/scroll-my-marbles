@@ -80,6 +80,7 @@ test_scroll_engine = executable(
   'test_scroll_engine',
   files('tests/test_scroll_engine.c', 'src/core/scroll_engine.c'),
   include_directories: inc_dirs,
+  dependencies: [libevdev_dep],
 )
 
 test('scroll_engine_tests', test_scroll_engine)

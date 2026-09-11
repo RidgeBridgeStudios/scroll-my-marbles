@@ -250,8 +250,15 @@ static void handle_dbusmenu_method_call(GDBusConnection *connection,
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else if (g_strcmp0(method_name, "AboutToShow") == 0) {
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(b)", FALSE));
+    } else if (g_strcmp0(method_name, "GetGroupProperties") == 0) {
+        GVariantBuilder b;
+        g_variant_builder_init(&b, G_VARIANT_TYPE("a(ia{sv})"));
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(a(ia{sv}))", &b));
     } else {
-        g_dbus_method_invocation_return_value(invocation, NULL);
+        g_dbus_method_invocation_return_error(invocation,
+                                              G_DBUS_ERROR,
+                                              G_DBUS_ERROR_UNKNOWN_METHOD,
+                                              "Method %s is not implemented", method_name);
     }
 }
 

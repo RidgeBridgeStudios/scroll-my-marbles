@@ -161,7 +161,7 @@ void settings_window_update_device_status(SettingsWindow *win, bool connected, c
     if (connected && device_name) {
         char subtitle[320];
         snprintf(subtitle, sizeof(subtitle), "Grabbed %s on %s", device_name, device_path ? device_path : "/dev/input");
-        adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->status_row), "Status: Active & Scrolling Ready");
+        adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->status_row), "Status: Active &amp; Scrolling Ready");
         adw_action_row_set_subtitle(win->status_row, subtitle);
         adw_action_row_set_icon_name(win->status_row, "emblem-ok-symbolic");
     } else {
@@ -304,7 +304,7 @@ SettingsWindow *settings_window_new(GtkApplication *app, Worker *worker) {
 
     /* --- GROUP 3: Scroll Modifier & Click Emulation --- */
     AdwPreferencesGroup *btn_group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
-    adw_preferences_group_set_title(btn_group, "Scroll Button & Click Emulation");
+    adw_preferences_group_set_title(btn_group, "Scroll Button &amp; Click Emulation");
     adw_preferences_group_set_description(btn_group, "Hold this button and move the ball to scroll. Release without motion to click.");
     adw_preferences_page_add(page, btn_group);
 
@@ -404,7 +404,7 @@ SettingsWindow *settings_window_new(GtkApplication *app, Worker *worker) {
 
     /* Actions Row with Reset & About buttons */
     AdwActionRow *action_row = ADW_ACTION_ROW(adw_action_row_new());
-    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(action_row), "Actions & Information");
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(action_row), "Actions &amp; Information");
 
     GtkWidget *reset_btn = gtk_button_new_with_label("Reset to Defaults");
     gtk_widget_set_valign(reset_btn, GTK_ALIGN_CENTER);

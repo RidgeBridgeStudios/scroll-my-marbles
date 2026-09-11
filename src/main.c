@@ -28,20 +28,35 @@ typedef struct {
 
 static AppContext g_app_ctx;
 
+typedef struct {
+    AppContext *ctx;
+    bool connected;
+    char *device_name;
+    char *device_path;
+} WorkerStatusPayload;
+
+static void on_worker_status_idle(gpointer user_data) {
+    WorkerStatusPayload *p = (WorkerStatusPayload *)user_data;
+    if (p->ctx->tray) {
+        tray_set_connected_status(p->ctx->tray, p->connected, p->device_name);
+    }
+    if (p->ctx->settings_win) {
+        settings_window_update_device_status(p->ctx->settings_win, p->connected, p->device_name, p->device_path);
+    }
+    g_free(p->device_name);
+    g_free(p->device_path);
+    g_free(p);
+}
+
 static void on_worker_status_changed(bool connected, const char *device_name, const char *device_path, void *user_data) {
     AppContext *ctx = (AppContext *)user_data;
+    WorkerStatusPayload *payload = g_new0(WorkerStatusPayload, 1);
+    payload->ctx = ctx;
+    payload->connected = connected;
+    payload->device_name = device_name ? g_strdup(device_name) : NULL;
+    payload->device_path = device_path ? g_strdup(device_path) : NULL;
 
-    g_idle_add_once((GSourceOnceFunc)({
-        void __lambda(void) {
-            if (ctx->tray) {
-                tray_set_connected_status(ctx->tray, connected, device_name);
-            }
-            if (ctx->settings_win) {
-                settings_window_update_device_status(ctx->settings_win, connected, device_name, device_path);
-            }
-        }
-        __lambda;
-    }), NULL);
+    g_idle_add_once(on_worker_status_idle, payload);
 }
 
 static void on_tray_settings(void *user_data) {
@@ -64,6 +79,12 @@ static void on_tray_quit(void *user_data) {
     if (ctx->app) {
         g_application_quit(G_APPLICATION(ctx->app));
     }
+}
+
+static void on_app_startup(GApplication *app, gpointer user_data) {
+    (void)user_data;
+    /* Hold application refcount so the process remains running even with no visible windows */
+    g_application_hold(app);
 }
 
 static void on_app_activate(GApplication *app, gpointer user_data) {
@@ -230,6 +251,7 @@ int main(int argc, char *argv[]) {
 
     /* Initialize GTK4 / Libadwaita Application */
     g_app_ctx.app = adw_application_new(APP_ID, G_APPLICATION_DEFAULT_FLAGS);
+    g_signal_connect(g_app_ctx.app, "startup", G_CALLBACK(on_app_startup), &g_app_ctx);
     g_signal_connect(g_app_ctx.app, "activate", G_CALLBACK(on_app_activate), &g_app_ctx);
     g_signal_connect(g_app_ctx.app, "shutdown", G_CALLBACK(on_app_shutdown), &g_app_ctx);
 
@@ -249,7 +271,7 @@ int main(int argc, char *argv[]) {
         tray_set_connected_status(g_app_ctx.tray, connected, dev_name);
     }
 
-    int status = g_application_run(G_APPLICATION(g_app_ctx.app), argc, argv);
+    int status = g_application_run(G_APPLICATION(g_app_ctx.app), 0, NULL);
     g_object_unref(g_app_ctx.app);
 
     return status;
