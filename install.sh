@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Scroll My Marbles - Automated Easy Installer
-# Repository: https://github.com/businessgaberino-commits/scroll-my-marbles
+# Repository: https://github.com/RidgeBridgeStudios/scroll-my-marbles
 # ==============================================================================
 set -euo pipefail
 
-REPO="businessgaberino-commits/scroll-my-marbles"
+REPO="RidgeBridgeStudios/scroll-my-marbles"
 DEFAULT_VERSION="1.0.0"
 VERSION="${VERSION:-$DEFAULT_VERSION}"
 PACKAGE_NAME="scroll-my-marbles"

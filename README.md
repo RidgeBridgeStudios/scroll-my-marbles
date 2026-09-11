@@ -70,7 +70,7 @@ No compiling or command-line experience required! Choose the method that suits y
 Open your terminal (press `Ctrl` + `Alt` + `T`) and paste:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/businessgaberino-commits/scroll-my-marbles/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/RidgeBridgeStudios/scroll-my-marbles/main/install.sh | bash
 ```
 
 > **What this does automatically:**
@@ -83,7 +83,7 @@ curl -fsSL https://raw.githubusercontent.com/businessgaberino-commits/scroll-my-
 
 ### 📦 Option 2: Download & Install the `.deb` Package (Ubuntu, Debian, Linux Mint, Zorin OS, Pop!_OS)
 
-1. Open the **[GitHub Releases Tab](https://github.com/businessgaberino-commits/scroll-my-marbles/releases)**.
+1. Open the **[GitHub Releases Tab](https://github.com/RidgeBridgeStudios/scroll-my-marbles/releases)**.
 2. Under **Assets**, click to download **`scroll-my-marbles_1.0.0_amd64.deb`**.
 3. Install it using either method:
    - **Graphical**: Double-click the downloaded `.deb` file to open it in your Software Center / App Center, then click **Install**.
@@ -113,7 +113,7 @@ curl -fsSL https://raw.githubusercontent.com/businessgaberino-commits/scroll-my-
 To remove Scroll My Marbles at any time:
 ```bash
 # Using the installer script:
-curl -fsSL https://raw.githubusercontent.com/businessgaberino-commits/scroll-my-marbles/main/install.sh | bash -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/RidgeBridgeStudios/scroll-my-marbles/main/install.sh | bash -s -- --uninstall
 
 # Or using apt:
 sudo apt remove scroll-my-marbles
