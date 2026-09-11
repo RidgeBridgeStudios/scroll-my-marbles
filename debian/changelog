@@ -1,4 +1,4 @@
-scroll-my-marbles (1.0.0-1) unstable; urgency=medium
+scroll-my-marbles (1.0.0) stable; urgency=medium
 
   * Initial release of Scroll My Marbles for Linux.
   * Added evdev exclusive grab and virtual uinput event forwarding.

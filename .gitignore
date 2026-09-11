@@ -9,6 +9,9 @@ subprojects/
 *.so
 
 # Debian packaging artifacts
+*.deb
+*.tar.gz
+SHA256SUMS.txt
 ../*.deb
 ../*.buildinfo
 ../*.changes

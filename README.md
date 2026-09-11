@@ -62,15 +62,70 @@ Inspired by and translating the core logic of [TBScroll](https://github.com/spit
 
 ---
 
-## Installation & Packaging
+## 🚀 Quick Install (Beginner Friendly)
 
-### Target Platform
-- **OS**: Ubuntu 22.04 / 24.04, Debian 12+, Zorin OS 17/18, Fedora, or any modern Linux distribution.
-- **Display Server**: Wayland or X11.
+No compiling or command-line experience required! Choose the method that suits you best:
+
+### ⚡ Option 1: 1-Line Automatic Install (Recommended & Easiest)
+Open your terminal (press `Ctrl` + `Alt` + `T`) and paste:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/businessgaberino-commits/scroll-my-marbles/main/install.sh | bash
+```
+
+> **What this does automatically:**
+> 1. Detects your Linux distribution and downloads the latest official `.deb` package.
+> 2. Installs required system libraries and the application binary (`/usr/bin/scroll-my-marbles`).
+> 3. Configures `udev` hardware permission rules so you can run without root/sudo.
+> 4. Adds **Scroll My Marbles** with high-resolution icons to your application launcher.
+
+---
+
+### 📦 Option 2: Download & Install the `.deb` Package (Ubuntu, Debian, Linux Mint, Zorin OS, Pop!_OS)
+
+1. Open the **[GitHub Releases Tab](https://github.com/businessgaberino-commits/scroll-my-marbles/releases)**.
+2. Under **Assets**, click to download **`scroll-my-marbles_1.0.0_amd64.deb`**.
+3. Install it using either method:
+   - **Graphical**: Double-click the downloaded `.deb` file to open it in your Software Center / App Center, then click **Install**.
+   - **Terminal**: Open the folder where the file downloaded (e.g. `Downloads`) and run:
+     ```bash
+     sudo apt install ./scroll-my-marbles_*_amd64.deb
+     ```
+4. Done! You will find **Scroll My Marbles** in your applications menu.
+
+---
+
+### 🖱️ First-Time Use & Beginner Tips
+
+1. **How to Scroll**:
+   - **Hold down the Middle Button** (default) and **roll the trackball** to scroll vertically or horizontally.
+   - **Click & release without rolling** sends a normal middle click (e.g., to open a link in a new browser tab or close a tab).
+2. **Device Permission Setup (Important)**:
+   - The installer automatically configures hardware rules (`/lib/udev/rules.d/99-scroll-my-marbles.rules`).
+   - If scrolling doesn't respond on your very first run, simply **unplug and reconnect your trackball** (or log out and back in) so Linux refreshes its device permissions.
+3. **Tray Icon & Autostart on Login**:
+   - Scroll My Marbles runs in your system tray / notification area.
+   - Click the tray icon to open **Settings** and toggle **"Autostart on Login"** so scrolling is always active whenever you boot your computer.
+
+---
+
+### 🗑️ How to Uninstall
+To remove Scroll My Marbles at any time:
+```bash
+# Using the installer script:
+curl -fsSL https://raw.githubusercontent.com/businessgaberino-commits/scroll-my-marbles/main/install.sh | bash -s -- --uninstall
+
+# Or using apt:
+sudo apt remove scroll-my-marbles
+```
+
+---
+
+## 🛠️ Building from Source (Developers & Advanced Users)
+
+If you are developing, customizing the code, or on a non-Debian distribution:
 
 ### 1. Install Build Dependencies
-To compile the application or build the `.deb` package:
-
 ```bash
 sudo apt update
 sudo apt install -y \
@@ -82,50 +137,25 @@ sudo apt install -y \
   libevdev-dev \
   libgtk-4-dev \
   libadwaita-1-dev \
-  debhelper
+  debhelper \
+  fakeroot
 ```
 
-### 2. Build the Native `.deb` Package
-From the root of the repository:
-
+### 2. Build and Package with `./build.sh`
+Run the automated build script to compile, run tests, and produce packages:
 ```bash
-dpkg-buildpackage -us -uc -b
+./build.sh
 ```
+This generates:
+- `scroll-my-marbles_1.0.0_amd64.deb`
+- `scroll-my-marbles-1.0.0-linux-x86_64.tar.gz`
+- `SHA256SUMS.txt`
 
-This generates `../scroll-my-marbles_1.0.0-1_<arch>.deb`.
-
-### 3. Install the `.deb`
-Install the package using `dpkg` or `apt`:
-
+### 3. Manual Build with Meson & Ninja
 ```bash
-sudo dpkg -i ../scroll-my-marbles_1.0.0-1_*.deb
-# If there are missing runtime dependencies:
-sudo apt-get install -f
-```
-
-The installer:
-1. Installs the binary to `/usr/bin/scroll-my-marbles`.
-2. Installs the desktop launcher to `/usr/share/applications/scroll-my-marbles.desktop`.
-3. Installs high-resolution icons to `/usr/share/icons/hicolor/`.
-4. Installs the udev rule to `/lib/udev/rules.d/99-scroll-my-marbles.rules` and reloads udev rules automatically.
-
----
-
-## Building Locally with Meson & Ninja
-
-For development without generating a `.deb`:
-
-```bash
-# Configure build directory
-meson setup build
-
-# Compile
+meson setup build --prefix=/usr
 ninja -C build
-
-# Run unit tests
 ninja -C build test
-
-# Install locally
 sudo ninja -C build install
 ```
 
@@ -144,7 +174,7 @@ SUBSYSTEM=="input", ATTRS{name}=="*Trackball*", TAG+="uaccess"
 SUBSYSTEM=="input", ENV{ID_INPUT_TRACKBALL}=="1", TAG+="uaccess"
 ```
 
-If you installed manually without the `.deb`:
+If you installed manually from source without the package:
 ```bash
 sudo cp data/99-scroll-my-marbles.rules /lib/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
