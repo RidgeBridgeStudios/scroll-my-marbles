@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Scroll My Marbles
+Comment=TrackMan Marble FX Scroll Emulation and Button Remapping
+Exec=scroll-my-marbles
+Icon=scroll-my-marbles
+Terminal=false
+Type=Application
+Categories=Utility;Settings;HardwareSettings;
+Keywords=trackball;marble;scroll;logitech;mouse;wheel;
+StartupNotify=true
+X-GNOME-UsesNotifications=true
+Actions=Settings;
+
+[Desktop Action Settings]
+Name=Settings
+Exec=scroll-my-marbles --settings

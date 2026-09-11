@@ -1,0 +1,13 @@
+scroll-my-marbles (1.0.0-1) unstable; urgency=medium
+
+  * Initial release of Scroll My Marbles for Linux.
+  * Added evdev exclusive grab and virtual uinput event forwarding.
+  * Added vertical/horizontal scroll emulation with sensitivity control.
+  * Added reverse/natural scrolling and smooth high-res scrolling.
+  * Added middle-click emulation upon releasing scroll modifier without motion.
+  * Added auxiliary button remapping (BTN_SIDE, BTN_EXTRA, etc.).
+  * Added modern GTK4 + Libadwaita settings preferences window.
+  * Added native StatusNotifierItem / DBus system tray indicator.
+  * Added udev rules for unprivileged access.
+
+ -- businessgaberino-commits <contact@example.com>  Fri, 11 Sep 2026 21:00:00 +0200

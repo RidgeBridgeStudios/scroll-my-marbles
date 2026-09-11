@@ -1,0 +1,13 @@
+# 99-scroll-my-marbles.rules
+# Udev rules for Scroll My Marbles (Logitech TrackMan Marble FX)
+# Grants unprivileged access to uinput and the trackball for the active seat user.
+
+# 1. Allow active user to create virtual uinput devices
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+
+# 2. Grant active user access to Logitech TrackMan Marble FX & related trackballs
+SUBSYSTEM=="input", ATTRS{name}=="*TrackMan Marble*", TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{name}=="*Marble FX*", TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{name}=="*Logitech TrackMan*", TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{name}=="*Trackball*", TAG+="uaccess"
+SUBSYSTEM=="input", ENV{ID_INPUT_TRACKBALL}=="1", TAG+="uaccess"

@@ -1,0 +1,28 @@
+# Build directories
+build/
+subprojects/
+.mesonpy/
+
+# Compiled objects
+*.o
+*.a
+*.so
+
+# Debian packaging artifacts
+../*.deb
+../*.buildinfo
+../*.changes
+../*.dsc
+../*.tar.*
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/scroll-my-marbles/
+debian/scroll-my-marbles.substvars
+
+# Test binaries
+test_scroll_engine
+test_config
+
+# Configs & logs
+*.log
