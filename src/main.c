@@ -68,10 +68,10 @@ static void on_tray_settings(void *user_data) {
 
 static void on_tray_about(void *user_data) {
     AppContext *ctx = (AppContext *)user_data;
-    if (ctx->settings_win) {
-        settings_window_present(ctx->settings_win);
-        settings_window_show_about(NULL);
-    }
+    GtkWindow *parent = NULL;
+    if (ctx->settings_win)
+        parent = settings_window_get_window(ctx->settings_win);
+    settings_window_show_about(parent);
 }
 
 static void on_tray_quit(void *user_data) {
@@ -176,7 +176,7 @@ static int run_test_mode(const char *override_device) {
             if (ev.type == EV_KEY && ev.code == cfg.scroll_button) {
                 printf("[TEST] Scroll button %s %s\n",
                        config_button_code_to_name(ev.code),
-                       ev.value == 1 ? "PRESSED (HOLD)" : "RELEASED");
+                       ev.value == 1 ? "PRESSED" : "RELEASED");
             } else if (ev.type == EV_REL && engine.button_pressed) {
                 if (ev.code == REL_Y) {
                     printf("[TEST] Trackball Y motion: delta=%d | AccumY=%d / %d\n",

@@ -10,6 +10,8 @@ typedef struct {
     AppConfig config;
     bool button_pressed;
     bool scrolling_active;
+    bool btn_side_down;
+    bool btn_extra_down;
     int accum_x;
     int accum_y;
     int effective_sens_x;

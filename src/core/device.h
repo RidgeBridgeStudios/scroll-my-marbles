@@ -11,6 +11,8 @@
 typedef struct {
     char path[PATH_MAX];
     char name[256];
+    uint16_t vendor_id;
+    uint16_t product_id;
     bool is_trackman;
     bool is_pointer;
 } DeviceInfo;
@@ -27,7 +29,8 @@ typedef struct DeviceContext {
 /* Device enumeration and discovery */
 int device_scan_pointers(DeviceInfo **out_list);
 void device_free_scan_list(DeviceInfo *list, int count);
-bool device_is_trackman_name(const char *name);
+bool device_is_target_trackball(struct libevdev *dev);
+bool device_looks_like_trackball(struct libevdev *dev);
 
 /* Device grab and uinput creation */
 DeviceContext *device_open_and_grab(const char *preferred_path, const char *preferred_name);

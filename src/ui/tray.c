@@ -149,7 +149,7 @@ static GVariant *handle_sni_get_property(GDBusConnection *connection,
         if (t->connected && t->device_name) {
             snprintf(tip, sizeof(tip), "Active: %s", t->device_name);
         } else {
-            snprintf(tip, sizeof(tip), "Searching for TrackMan Marble FX...");
+            snprintf(tip, sizeof(tip), "Searching for Logitech USB Trackball...");
         }
         g_variant_builder_add(&b, "s", tip);
 

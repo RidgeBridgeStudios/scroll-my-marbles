@@ -16,6 +16,7 @@
 #define KEY_REVERSE_SCROLL "ReverseScroll"
 #define KEY_SMOOTH_SCROLL "SmoothScroll"
 #define KEY_SCROLL_BUTTON "ScrollButton"
+#define KEY_SCROLL_MOD_MODE "ScrollModifierMode"
 #define KEY_EMULATE_CLICK "EmulateClick"
 #define KEY_EMULATED_CLICK_BTN "EmulatedClickButton"
 #define KEY_AUTOSTART "Autostart"
@@ -55,14 +56,15 @@ void config_set_defaults(AppConfig *cfg) {
     cfg->h_sensitivity = CONFIG_DEFAULT_H_SENSITIVITY;
     cfg->reverse_scroll = false;
     cfg->smooth_scroll = false;
-    cfg->scroll_button = BTN_MIDDLE;
+    cfg->scroll_button = BTN_SIDE;
     cfg->emulate_click = true;
     cfg->emulated_click_button = BTN_MIDDLE;
     cfg->autostart = true;
+    cfg->scroll_mod_mode = SCROLL_MOD_SINGLE_BUTTON;
 
-    cfg->btn_side_action = BUTTON_ACTION_PASSTHROUGH;
-    cfg->btn_extra_action = BUTTON_ACTION_PASSTHROUGH;
-    cfg->btn_middle_action = BUTTON_ACTION_SCROLL_MODIFIER;
+    cfg->btn_side_action = BUTTON_ACTION_SCROLL_MODIFIER;
+    cfg->btn_extra_action = BUTTON_ACTION_SCROLL_MODIFIER;
+    cfg->btn_middle_action = BUTTON_ACTION_PASSTHROUGH;
     cfg->btn_right_action = BUTTON_ACTION_PASSTHROUGH;
 }
 
@@ -145,6 +147,7 @@ bool config_load(AppConfig *cfg) {
         g_clear_error(&error);
         g_key_file_free(kf);
         config_save(cfg);
+        config_update_autostart(cfg->autostart);
         g_free(path);
         return true;
     }
@@ -183,6 +186,16 @@ bool config_load(AppConfig *cfg) {
     str_val = g_key_file_get_string(kf, GROUP_GENERAL, KEY_SCROLL_BUTTON, NULL);
     if (str_val) {
         cfg->scroll_button = config_button_name_to_code(str_val);
+        g_free(str_val);
+    }
+
+    str_val = g_key_file_get_string(kf, GROUP_GENERAL, KEY_SCROLL_MOD_MODE, NULL);
+    if (str_val) {
+        if (g_ascii_strcasecmp(str_val, "ChordBothSideButtons") == 0) {
+            cfg->scroll_mod_mode = SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS;
+        } else {
+            cfg->scroll_mod_mode = SCROLL_MOD_SINGLE_BUTTON;
+        }
         g_free(str_val);
     }
 
@@ -248,6 +261,8 @@ bool config_save(const AppConfig *cfg) {
     g_key_file_set_boolean(kf, GROUP_GENERAL, KEY_REVERSE_SCROLL, cfg->reverse_scroll);
     g_key_file_set_boolean(kf, GROUP_GENERAL, KEY_SMOOTH_SCROLL, cfg->smooth_scroll);
     g_key_file_set_string(kf, GROUP_GENERAL, KEY_SCROLL_BUTTON, config_button_code_to_name(cfg->scroll_button));
+    g_key_file_set_string(kf, GROUP_GENERAL, KEY_SCROLL_MOD_MODE,
+        cfg->scroll_mod_mode == SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS ? "ChordBothSideButtons" : "SingleButton");
     g_key_file_set_boolean(kf, GROUP_GENERAL, KEY_EMULATE_CLICK, cfg->emulate_click);
     g_key_file_set_string(kf, GROUP_GENERAL, KEY_EMULATED_CLICK_BTN, config_button_code_to_name(cfg->emulated_click_button));
     g_key_file_set_boolean(kf, GROUP_GENERAL, KEY_AUTOSTART, cfg->autostart);
@@ -279,7 +294,6 @@ bool config_save(const AppConfig *cfg) {
         pthread_mutex_unlock(&g_config_mutex);
     }
 
-    config_update_autostart(cfg->autostart);
     return ok;
 }
 
@@ -293,9 +307,13 @@ void config_get_copy(AppConfig *dest) {
 void config_set_copy(const AppConfig *src) {
     if (!src) return;
     pthread_mutex_lock(&g_config_mutex);
+    bool autostart_changed = (src->autostart != g_active_config.autostart);
     g_active_config = *src;
     pthread_mutex_unlock(&g_config_mutex);
     config_save(src);
+    if (autostart_changed) {
+        config_update_autostart(src->autostart);
+    }
 }
 
 bool config_update_autostart(bool enable) {
@@ -307,7 +325,7 @@ bool config_update_autostart(bool enable) {
             "[Desktop Entry]\n"
             "Type=Application\n"
             "Name=Scroll My Marbles\n"
-            "Comment=TrackMan Marble FX Scroll Emulation\n"
+            "Comment=Logitech TrackMan Marble Scroll Emulation\n"
             "Exec=/usr/bin/scroll-my-marbles --tray\n"
             "Icon=scroll-my-marbles\n"
             "Terminal=false\n"

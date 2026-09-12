@@ -1,13 +1,18 @@
 # 99-scroll-my-marbles.rules
-# Udev rules for Scroll My Marbles (Logitech TrackMan Marble FX)
-# Grants unprivileged access to uinput and the trackball for the active seat user.
+# Udev rules for Scroll My Marbles
+# Grants unprivileged access to uinput and to Logitech trackballs.
 
 # 1. Allow active user to create virtual uinput devices
 KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
 
-# 2. Grant active user access to Logitech TrackMan Marble FX & related trackballs
-SUBSYSTEM=="input", ATTRS{name}=="*TrackMan Marble*", TAG+="uaccess"
-SUBSYSTEM=="input", ATTRS{name}=="*Marble FX*", TAG+="uaccess"
-SUBSYSTEM=="input", ATTRS{name}=="*Logitech TrackMan*", TAG+="uaccess"
-SUBSYSTEM=="input", ATTRS{name}=="*Trackball*", TAG+="uaccess"
-SUBSYSTEM=="input", ENV{ID_INPUT_TRACKBALL}=="1", TAG+="uaccess"
+# 2. Primary target: Logitech Marble Mouse / TrackMan Marble T-BC21
+SUBSYSTEM=="input", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c408", TAG+="uaccess"
+
+# 3. Secondary: Logitech TrackMan Marble FX
+SUBSYSTEM=="input", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c401", TAG+="uaccess"
+
+# 4. Fallback: name-based for other wheel-less trackballs
+SUBSYSTEM=="input", ATTRS{name}=="*USB Trackball*",  TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{name}=="*TrackMan*",        TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{name}=="*Marble*",          TAG+="uaccess"
+SUBSYSTEM=="input", ENV{ID_INPUT_TRACKBALL}=="1",     TAG+="uaccess"

@@ -26,19 +26,11 @@ struct SettingsWindow {
     bool updating_ui;
 };
 
-static const char *scroll_btn_names[] = {
-    "Middle Button (BTN_MIDDLE)",
-    "Button 4 / Back (BTN_SIDE)",
-    "Button 5 / Forward (BTN_EXTRA)",
-    "Right Button (BTN_RIGHT)",
+static const char *scroll_modifier_names[] = {
+    "Small Left Button - hold & roll (Recommended)",
+    "Small Right Button - hold & roll",
+    "Either small button (chord) - hold both & roll",
     NULL
-};
-
-static const uint16_t scroll_btn_codes[] = {
-    BTN_MIDDLE,
-    BTN_SIDE,
-    BTN_EXTRA,
-    BTN_RIGHT
 };
 
 static const char *click_btn_names[] = {
@@ -84,8 +76,15 @@ static void apply_and_save(SettingsWindow *win) {
     win->cfg.autostart = adw_switch_row_get_active(win->autostart_switch);
 
     guint s_idx = adw_combo_row_get_selected(win->scroll_btn_combo);
-    if (s_idx < G_N_ELEMENTS(scroll_btn_codes)) {
-        win->cfg.scroll_button = scroll_btn_codes[s_idx];
+    if (s_idx == 0) {
+        win->cfg.scroll_mod_mode = SCROLL_MOD_SINGLE_BUTTON;
+        win->cfg.scroll_button = BTN_SIDE;
+    } else if (s_idx == 1) {
+        win->cfg.scroll_mod_mode = SCROLL_MOD_SINGLE_BUTTON;
+        win->cfg.scroll_button = BTN_EXTRA;
+    } else if (s_idx == 2) {
+        win->cfg.scroll_mod_mode = SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS;
+        win->cfg.scroll_button = BTN_SIDE;
     }
 
     guint c_idx = adw_combo_row_get_selected(win->emulated_click_btn_combo);
@@ -136,7 +135,7 @@ static void populate_devices(SettingsWindow *win) {
     win->scanned_count = device_scan_pointers(&win->scanned_devices);
 
     GtkStringList *list = gtk_string_list_new(NULL);
-    gtk_string_list_append(list, "Auto-detect (Logitech TrackMan Marble FX)");
+    gtk_string_list_append(list, "Auto-detect (Logitech USB Trackball)");
 
     int selected_idx = 0;
     for (int i = 0; i < win->scanned_count; i++) {
@@ -166,7 +165,7 @@ void settings_window_update_device_status(SettingsWindow *win, bool connected, c
         adw_action_row_set_icon_name(win->status_row, "emblem-ok-symbolic");
     } else {
         adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->status_row), "Status: Waiting for Device");
-        adw_action_row_set_subtitle(win->status_row, "Searching for Logitech TrackMan Marble FX in /dev/input...");
+        adw_action_row_set_subtitle(win->status_row, "Searching for Logitech USB Trackball in /dev/input...");
         adw_action_row_set_icon_name(win->status_row, "process-working-symbolic");
     }
 }
@@ -196,28 +195,50 @@ static void on_reset_defaults_clicked(GtkButton *btn, gpointer user_data) {
     adw_combo_row_set_selected(win->device_combo, 0);
     adw_combo_row_set_selected(win->scroll_btn_combo, 0);
     adw_combo_row_set_selected(win->emulated_click_btn_combo, 0);
-    adw_combo_row_set_selected(win->btn4_action_combo, 0);
-    adw_combo_row_set_selected(win->btn5_action_combo, 0);
+
+    guint sel_b4 = 0;
+    for (guint i = 0; i < G_N_ELEMENTS(button_actions); i++) {
+        if (button_actions[i] == win->cfg.btn_side_action) { sel_b4 = i; break; }
+    }
+    adw_combo_row_set_selected(win->btn4_action_combo, sel_b4);
+
+    guint sel_b5 = 0;
+    for (guint i = 0; i < G_N_ELEMENTS(button_actions); i++) {
+        if (button_actions[i] == win->cfg.btn_extra_action) { sel_b5 = i; break; }
+    }
+    adw_combo_row_set_selected(win->btn5_action_combo, sel_b5);
 
     win->updating_ui = false;
     apply_and_save(win);
 }
 
+GtkWindow *settings_window_get_window(SettingsWindow *win) {
+    if (!win || !win->pref_win) return NULL;
+    return GTK_WINDOW(win->pref_win);
+}
+
 void settings_window_show_about(GtkWindow *parent) {
     const char *developers[] = { "RidgeBridgeStudios", "Spitfire_x86 (original TBScroll)", NULL };
+    GtkWidget *parent_widget = parent ? GTK_WIDGET(parent) : NULL;
+    if (!parent_widget) {
+        GApplication *app = g_application_get_default();
+        if (app && GTK_IS_APPLICATION(app)) {
+            GtkWindow *active = gtk_application_get_active_window(GTK_APPLICATION(app));
+            if (active) parent_widget = GTK_WIDGET(active);
+        }
+    }
 
     adw_show_about_dialog(
-        GTK_WIDGET(parent),
+        parent_widget,
         "application-name", "Scroll My Marbles",
         "application-icon", "scroll-my-marbles",
-        "developer-name", "Scroll My Marbles Team",
-        "version", "1.0.0",
+        "developer-name", "RidgeBridgeStudios",
+        "version", "1.1.0",
         "copyright", "© 2026 RidgeBridgeStudios",
         "license-type", GTK_LICENSE_MIT_X11,
         "website", "https://github.com/RidgeBridgeStudios/scroll-my-marbles",
         "issue-url", "https://github.com/RidgeBridgeStudios/scroll-my-marbles/issues",
-        "comments", "Native Linux scroll emulation and button remapping for pointing devices "
-                    "without a dedicated scroll wheel, targeting the Logitech TrackMan Marble FX.",
+        "comments", "Smooth scrolling and button mapping for the Logitech TrackMan Marble T-BC21 and Marble FX trackballs on Linux.",
         "developers", developers,
         NULL
     );
@@ -280,13 +301,13 @@ SettingsWindow *settings_window_new(GtkApplication *app, Worker *worker) {
 
     win->v_sens_spin = ADW_SPIN_ROW(adw_spin_row_new_with_range(1, 500, 1));
     adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->v_sens_spin), "Vertical Sensitivity");
-    adw_action_row_set_subtitle(ADW_ACTION_ROW(win->v_sens_spin), "Lower values scroll faster (default: 20)");
+    adw_action_row_set_subtitle(ADW_ACTION_ROW(win->v_sens_spin), "Lower values scroll faster (default: 50)");
     adw_spin_row_set_value(win->v_sens_spin, win->cfg.v_sensitivity);
     adw_preferences_group_add(scroll_group, GTK_WIDGET(win->v_sens_spin));
 
     win->h_sens_spin = ADW_SPIN_ROW(adw_spin_row_new_with_range(1, 500, 1));
     adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->h_sens_spin), "Horizontal Sensitivity");
-    adw_action_row_set_subtitle(ADW_ACTION_ROW(win->h_sens_spin), "Lower values scroll faster (default: 120)");
+    adw_action_row_set_subtitle(ADW_ACTION_ROW(win->h_sens_spin), "Lower values scroll faster (default: 200)");
     adw_spin_row_set_value(win->h_sens_spin, win->cfg.h_sensitivity);
     adw_preferences_group_add(scroll_group, GTK_WIDGET(win->h_sens_spin));
 
@@ -310,18 +331,23 @@ SettingsWindow *settings_window_new(GtkApplication *app, Worker *worker) {
 
     win->scroll_btn_combo = ADW_COMBO_ROW(adw_combo_row_new());
     adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->scroll_btn_combo), "Scroll Modifier Button");
-    GtkStringList *s_model = gtk_string_list_new(scroll_btn_names);
+    adw_action_row_set_subtitle(ADW_ACTION_ROW(win->scroll_btn_combo), "The T-BC21 has no middle button. Use a small side button.");
+    GtkStringList *s_model = gtk_string_list_new(scroll_modifier_names);
     adw_combo_row_set_model(win->scroll_btn_combo, G_LIST_MODEL(s_model));
     guint sel_btn = 0;
-    for (guint i = 0; i < G_N_ELEMENTS(scroll_btn_codes); i++) {
-        if (scroll_btn_codes[i] == win->cfg.scroll_button) { sel_btn = i; break; }
+    if (win->cfg.scroll_mod_mode == SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS) {
+        sel_btn = 2;
+    } else if (win->cfg.scroll_button == BTN_EXTRA) {
+        sel_btn = 1;
+    } else {
+        sel_btn = 0;
     }
     adw_combo_row_set_selected(win->scroll_btn_combo, sel_btn);
     adw_preferences_group_add(btn_group, GTK_WIDGET(win->scroll_btn_combo));
 
     win->emulate_click_switch = ADW_SWITCH_ROW(adw_switch_row_new());
-    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->emulate_click_switch), "Emulate Click on Release");
-    adw_action_row_set_subtitle(ADW_ACTION_ROW(win->emulate_click_switch), "Emits a click event if the scroll button is tapped without scrolling");
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->emulate_click_switch), "Emit middle click on side-button tap");
+    adw_action_row_set_subtitle(ADW_ACTION_ROW(win->emulate_click_switch), "Tap the scroll button without rolling the ball to middle-click.");
     adw_switch_row_set_active(win->emulate_click_switch, win->cfg.emulate_click);
     adw_preferences_group_add(btn_group, GTK_WIDGET(win->emulate_click_switch));
 

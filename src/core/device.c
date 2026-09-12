@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include "device.h"
+#include "../config/config.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -12,14 +13,55 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-bool device_is_trackman_name(const char *name) {
-    if (!name) return false;
-    if (strcasestr(name, "TrackMan") ||
-        strcasestr(name, "Trackman") ||
-        strcasestr(name, "Marble") ||
-        strcasestr(name, "Marble FX")) {
+bool device_is_target_trackball(struct libevdev *dev) {
+    if (!dev) return false;
+
+    int vendor = libevdev_get_id_vendor(dev);
+    int product = libevdev_get_id_product(dev);
+
+    /* Primary key: USB VID/PID 046d:c408 for Logitech Marble Mouse / TrackMan Marble (T-BC21) */
+    if (vendor == CONFIG_TBC21_VENDOR_ID && product == CONFIG_TBC21_PRODUCT_ID) {
         return true;
     }
+
+    /* Secondary: Logitech TrackMan Marble FX (046d:c401) */
+    if (vendor == CONFIG_TRACKMAN_FX_VENDOR_ID && product == CONFIG_TRACKMAN_FX_PRODUCT_ID) {
+        return true;
+    }
+
+    /* Fallback: legacy name substring matching */
+    const char *name = libevdev_get_name(dev);
+    if (name) {
+        if (strcasestr(name, "TrackMan") ||
+            strcasestr(name, "Trackball") ||
+            strcasestr(name, "Marble")) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool device_looks_like_trackball(struct libevdev *dev) {
+    if (!dev) return false;
+
+    if (device_is_target_trackball(dev)) {
+        return true;
+    }
+
+    bool has_rel_x = libevdev_has_event_type(dev, EV_REL) &&
+                      libevdev_has_event_code(dev, EV_REL, REL_X);
+    bool has_rel_y = libevdev_has_event_type(dev, EV_REL) &&
+                      libevdev_has_event_code(dev, EV_REL, REL_Y);
+    bool has_btn_left = libevdev_has_event_type(dev, EV_KEY) &&
+                         libevdev_has_event_code(dev, EV_KEY, BTN_LEFT);
+    bool has_rel_wheel = libevdev_has_event_type(dev, EV_REL) &&
+                          libevdev_has_event_code(dev, EV_REL, REL_WHEEL);
+
+    if (!has_rel_wheel && has_rel_x && has_rel_y && has_btn_left) {
+        return true;
+    }
+
     return false;
 }
 
@@ -107,7 +149,9 @@ int device_scan_pointers(DeviceInfo **out_list) {
             info->path[sizeof(info->path) - 1] = '\0';
             strncpy(info->name, name, sizeof(info->name) - 1);
             info->name[sizeof(info->name) - 1] = '\0';
-            info->is_trackman = device_is_trackman_name(name);
+            info->vendor_id = (uint16_t)libevdev_get_id_vendor(dev);
+            info->product_id = (uint16_t)libevdev_get_id_product(dev);
+            info->is_trackman = device_is_target_trackball(dev);
             info->is_pointer = true;
         }
 
@@ -149,30 +193,64 @@ DeviceContext *device_open_and_grab(const char *preferred_path, const char *pref
         }
 
         int selected_idx = -1;
+        bool is_auto = (!preferred_name || preferred_name[0] == '\0' ||
+                        strcmp(preferred_name, CONFIG_DEFAULT_DEVICE_NAME) == 0);
 
-        /* Try exact or substring name match first */
-        if (preferred_name && preferred_name[0] != '\0') {
+        if (!is_auto) {
+            /* An explicitly configured non-default device name was requested */
             for (int i = 0; i < count; i++) {
                 if (strcasestr(list[i].name, preferred_name)) {
                     selected_idx = i;
                     break;
                 }
             }
-        }
-
-        /* If not found, pick first TrackMan / Marble device */
-        if (selected_idx < 0) {
+            if (selected_idx < 0) {
+                fprintf(stderr, "Could not find matching device for explicitly configured '%s'\n", preferred_name);
+                device_free_scan_list(list, count);
+                return NULL;
+            }
+        } else {
+            /* Auto-detect fallback:
+             * 1. Prefer T-BC21 by VID/PID (046d:c408)
+             * 2. Prefer TrackMan FX by VID/PID (046d:c401)
+             * 3. Target trackball by name / fallback
+             * 4. First pointer
+             */
             for (int i = 0; i < count; i++) {
-                if (list[i].is_trackman) {
+                if (list[i].vendor_id == CONFIG_TBC21_VENDOR_ID &&
+                    list[i].product_id == CONFIG_TBC21_PRODUCT_ID) {
                     selected_idx = i;
                     break;
                 }
             }
-        }
 
-        /* If still not found and no specific preferred name was requested, pick first pointer */
-        if (selected_idx < 0 && (!preferred_name || preferred_name[0] == '\0')) {
-            selected_idx = 0;
+            if (selected_idx < 0) {
+                for (int i = 0; i < count; i++) {
+                    if (list[i].vendor_id == CONFIG_TRACKMAN_FX_VENDOR_ID &&
+                        list[i].product_id == CONFIG_TRACKMAN_FX_PRODUCT_ID) {
+                        selected_idx = i;
+                        break;
+                    }
+                }
+            }
+
+            if (selected_idx < 0) {
+                for (int i = 0; i < count; i++) {
+                    if (preferred_name && preferred_name[0] != '\0' &&
+                        strcasestr(list[i].name, preferred_name)) {
+                        selected_idx = i;
+                        break;
+                    }
+                    if (list[i].is_trackman) {
+                        selected_idx = i;
+                        break;
+                    }
+                }
+            }
+
+            if (selected_idx < 0 && count > 0) {
+                selected_idx = 0;
+            }
         }
 
         if (selected_idx >= 0) {
@@ -234,8 +312,8 @@ DeviceContext *device_open_and_grab(const char *preferred_path, const char *pref
 
     libevdev_set_name(uidev_desc, "Scroll My Marbles Virtual Trackball");
     libevdev_set_id_bustype(uidev_desc, BUS_USB);
-    libevdev_set_id_vendor(uidev_desc, 0x046d);  /* Logitech */
-    libevdev_set_id_product(uidev_desc, 0xc401); /* TrackMan Marble FX id */
+    libevdev_set_id_vendor(uidev_desc, CONFIG_TBC21_VENDOR_ID);  /* 0x046d */
+    libevdev_set_id_product(uidev_desc, CONFIG_TBC21_PRODUCT_ID); /* 0xc408 (T-BC21) */
     libevdev_set_id_version(uidev_desc, 1);
 
     /* Enable standard synchronization */

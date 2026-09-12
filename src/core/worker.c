@@ -203,6 +203,7 @@ void worker_stop(Worker *w) {
 
     w->running = false;
     uint64_t val = 1;
+    /* Wake worker thread to handle shutdown (w->running is false) */
     write(w->stop_event_fd, &val, sizeof(val));
 
     pthread_join(w->thread, NULL);
@@ -234,7 +235,7 @@ void worker_reload_config(Worker *w, const AppConfig *cfg) {
             w->current_dev_name[0] = '\0';
             w->current_dev_path[0] = '\0';
         }
-        /* Trigger immediate wakeup to re-attach */
+        /* Wake only: worker must not treat it as shutdown unless w->running is already false */
         uint64_t val = 1;
         write(w->stop_event_fd, &val, sizeof(val));
     }

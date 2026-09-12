@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Scroll My Marbles
-Comment=TrackMan Marble FX Scroll Emulation and Button Remapping
+Comment=Wheel-less scrolling for the Logitech TrackMan Marble (T-BC21) and compatible trackballs.
 Exec=scroll-my-marbles
 Icon=scroll-my-marbles
 Terminal=false

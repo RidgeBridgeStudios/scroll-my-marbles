@@ -6,11 +6,20 @@
 #include <linux/input.h>
 
 #define CONFIG_APP_NAME "scroll-my-marbles"
-#define CONFIG_DEFAULT_DEVICE_NAME "Logitech TrackMan Marble FX"
-#define CONFIG_DEFAULT_V_SENSITIVITY 20
-#define CONFIG_DEFAULT_H_SENSITIVITY 120
+#define CONFIG_DEFAULT_DEVICE_NAME "Logitech USB Trackball"
+#define CONFIG_TBC21_VENDOR_ID 0x046d
+#define CONFIG_TBC21_PRODUCT_ID 0xc408
+#define CONFIG_TRACKMAN_FX_VENDOR_ID 0x046d
+#define CONFIG_TRACKMAN_FX_PRODUCT_ID 0xc401
+#define CONFIG_DEFAULT_V_SENSITIVITY 50
+#define CONFIG_DEFAULT_H_SENSITIVITY 200
 #define CONFIG_SMOOTH_FACTOR 10
 #define CONFIG_STANDARD_WHEEL_DELTA 120
+
+typedef enum {
+    SCROLL_MOD_SINGLE_BUTTON = 0,
+    SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS,
+} ScrollModifierMode;
 
 typedef enum {
     BUTTON_ACTION_PASSTHROUGH = 0,
@@ -34,6 +43,7 @@ typedef struct {
     bool emulate_click;
     uint16_t emulated_click_button;
     bool autostart;
+    ScrollModifierMode scroll_mod_mode;
 
     /* Quick button assignments matching TBScroll options */
     ButtonAction btn_side_action;   /* Button 4 / BTN_SIDE */

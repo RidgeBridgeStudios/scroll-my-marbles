@@ -1,3 +1,13 @@
+scroll-my-marbles (1.1.0) stable; urgency=medium
+
+  * Add out-of-the-box support for Logitech TrackMan Marble T-BC21 (046d:c408).
+  * Set default scroll modifier to BTN_SIDE (small left button) and click to BTN_MIDDLE.
+  * Add chord modifier mode (both side buttons simultaneously).
+  * Adjust default vertical and horizontal sensitivities to 50 and 200.
+  * Update udev hardware rules and virtual uinput device attributes.
+
+ -- RidgeBridgeStudios <contact@example.com>  Sat, 12 Sep 2026 21:55:00 +0200
+
 scroll-my-marbles (1.0.0) stable; urgency=medium
 
   * Initial release of Scroll My Marbles for Linux.

@@ -45,13 +45,14 @@ void config_set_defaults(AppConfig *cfg) {
     cfg->h_sensitivity = CONFIG_DEFAULT_H_SENSITIVITY;
     cfg->reverse_scroll = false;
     cfg->smooth_scroll = false;
-    cfg->scroll_button = BTN_MIDDLE;
+    cfg->scroll_button = BTN_SIDE;
     cfg->emulate_click = true;
     cfg->emulated_click_button = BTN_MIDDLE;
     cfg->autostart = true;
-    cfg->btn_side_action = BUTTON_ACTION_PASSTHROUGH;
-    cfg->btn_extra_action = BUTTON_ACTION_PASSTHROUGH;
-    cfg->btn_middle_action = BUTTON_ACTION_SCROLL_MODIFIER;
+    cfg->scroll_mod_mode = SCROLL_MOD_SINGLE_BUTTON;
+    cfg->btn_side_action = BUTTON_ACTION_SCROLL_MODIFIER;
+    cfg->btn_extra_action = BUTTON_ACTION_SCROLL_MODIFIER;
+    cfg->btn_middle_action = BUTTON_ACTION_PASSTHROUGH;
     cfg->btn_right_action = BUTTON_ACTION_PASSTHROUGH;
 }
 
@@ -90,7 +91,7 @@ static void test_click_emulation_on_release(void) {
     printf("Running test_click_emulation_on_release...\n");
     AppConfig cfg;
     config_set_defaults(&cfg);
-    cfg.scroll_button = BTN_MIDDLE;
+    cfg.scroll_button = BTN_SIDE;
     cfg.emulate_click = true;
     cfg.emulated_click_button = BTN_MIDDLE;
 
@@ -99,8 +100,8 @@ static void test_click_emulation_on_release(void) {
     DeviceContext dummy_ctx;
     reset_test_events();
 
-    /* 1. Press middle button down */
-    struct input_event ev_down = { .type = EV_KEY, .code = BTN_MIDDLE, .value = 1 };
+    /* 1. Press side button down */
+    struct input_event ev_down = { .type = EV_KEY, .code = BTN_SIDE, .value = 1 };
     scroll_engine_process_event(&engine, &dummy_ctx, &ev_down);
 
     assert(engine.button_pressed == true);
@@ -108,8 +109,8 @@ static void test_click_emulation_on_release(void) {
     /* Should suppress press event from desktop */
     assert(g_event_count == 0);
 
-    /* 2. Release middle button without any movement */
-    struct input_event ev_up = { .type = EV_KEY, .code = BTN_MIDDLE, .value = 0 };
+    /* 2. Release side button without any movement */
+    struct input_event ev_up = { .type = EV_KEY, .code = BTN_SIDE, .value = 0 };
     scroll_engine_process_event(&engine, &dummy_ctx, &ev_up);
 
     assert(engine.button_pressed == false);
@@ -126,7 +127,7 @@ static void test_vertical_scrolling(void) {
     printf("Running test_vertical_scrolling...\n");
     AppConfig cfg;
     config_set_defaults(&cfg);
-    cfg.scroll_button = BTN_MIDDLE;
+    cfg.scroll_button = BTN_SIDE;
     cfg.v_sensitivity = 20;
     cfg.reverse_scroll = false;
     cfg.smooth_scroll = false;
@@ -137,7 +138,7 @@ static void test_vertical_scrolling(void) {
     reset_test_events();
 
     /* Press modifier */
-    struct input_event ev = { .type = EV_KEY, .code = BTN_MIDDLE, .value = 1 };
+    struct input_event ev = { .type = EV_KEY, .code = BTN_SIDE, .value = 1 };
     scroll_engine_process_event(&engine, &dummy_ctx, &ev);
     reset_test_events();
 
@@ -162,7 +163,7 @@ static void test_vertical_scrolling(void) {
     reset_test_events();
 
     /* Release modifier button: since scrolling occurred, NO click should be emulated! */
-    ev.type = EV_KEY; ev.code = BTN_MIDDLE; ev.value = 0;
+    ev.type = EV_KEY; ev.code = BTN_SIDE; ev.value = 0;
     scroll_engine_process_event(&engine, &dummy_ctx, &ev);
     assert(engine.button_pressed == false);
     assert(g_event_count == 0);
@@ -173,7 +174,7 @@ static void test_horizontal_scrolling(void) {
     printf("Running test_horizontal_scrolling...\n");
     AppConfig cfg;
     config_set_defaults(&cfg);
-    cfg.scroll_button = BTN_MIDDLE;
+    cfg.scroll_button = BTN_SIDE;
     cfg.h_sensitivity = 50;
     cfg.reverse_scroll = false;
     cfg.smooth_scroll = false;
@@ -184,7 +185,7 @@ static void test_horizontal_scrolling(void) {
     reset_test_events();
 
     /* Press modifier */
-    struct input_event ev = { .type = EV_KEY, .code = BTN_MIDDLE, .value = 1 };
+    struct input_event ev = { .type = EV_KEY, .code = BTN_SIDE, .value = 1 };
     scroll_engine_process_event(&engine, &dummy_ctx, &ev);
     reset_test_events();
 
@@ -204,7 +205,7 @@ static void test_reverse_scrolling(void) {
     printf("Running test_reverse_scrolling...\n");
     AppConfig cfg;
     config_set_defaults(&cfg);
-    cfg.scroll_button = BTN_MIDDLE;
+    cfg.scroll_button = BTN_SIDE;
     cfg.v_sensitivity = 20;
     cfg.reverse_scroll = true;
 
@@ -214,16 +215,18 @@ static void test_reverse_scrolling(void) {
     reset_test_events();
 
     /* Press modifier */
-    struct input_event ev = { .type = EV_KEY, .code = BTN_MIDDLE, .value = 1 };
+    struct input_event ev = { .type = EV_KEY, .code = BTN_SIDE, .value = 1 };
     scroll_engine_process_event(&engine, &dummy_ctx, &ev);
     reset_test_events();
 
-    /* Move trackball down by 25 units. With reverse_scroll=true, accum_y = -25.
-     * steps = -25 / 20 = -1. wheel_val = -steps = +1 (wheel up).
+    /* Move trackball down by 25 units. Raw accum_y = 25.
+     * steps = 25 / 20 = 1. wheel_val = -steps = -1.
+     * With reverse_scroll=true, wheel_val = +1 (wheel up).
      */
     ev.type = EV_REL; ev.code = REL_Y; ev.value = 25;
     scroll_engine_process_event(&engine, &dummy_ctx, &ev);
     assert(engine.scrolling_active == true);
+    assert(engine.accum_y == 5);
     assert(g_events[0].type == EV_REL && g_events[0].code == REL_WHEEL && g_events[0].value == 1);
     printf(" -> Passed!\n");
 }
@@ -232,6 +235,7 @@ static void test_button_remapping(void) {
     printf("Running test_button_remapping...\n");
     AppConfig cfg;
     config_set_defaults(&cfg);
+    cfg.scroll_button = BTN_MIDDLE; /* Use BTN_MIDDLE as modifier so BTN_SIDE is tested for remapping */
     cfg.btn_side_action = BUTTON_ACTION_MIDDLE_CLICK; /* Button 4 sends MMB */
     cfg.btn_extra_action = BUTTON_ACTION_DISABLED;    /* Button 5 disabled */
 
@@ -280,6 +284,139 @@ static void test_passthrough_when_not_held(void) {
     printf(" -> Passed!\n");
 }
 
+static void test_chord_modifier_arms_on_both_buttons(void) {
+    printf("Running test_chord_modifier_arms_on_both_buttons...\n");
+    AppConfig cfg;
+    config_set_defaults(&cfg);
+    cfg.scroll_mod_mode = SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS;
+    cfg.emulate_click = true;
+    cfg.emulated_click_button = BTN_MIDDLE;
+
+    ScrollEngine engine;
+    scroll_engine_init(&engine, &cfg);
+    DeviceContext dummy_ctx;
+    reset_test_events();
+
+    /* Press BTN_SIDE alone: should not arm modifier */
+    struct input_event ev_side_down = { .type = EV_KEY, .code = BTN_SIDE, .value = 1 };
+    scroll_engine_process_event(&engine, &dummy_ctx, &ev_side_down);
+    assert(engine.button_pressed == false);
+    assert(engine.btn_side_down == true);
+    assert(engine.btn_extra_down == false);
+    assert(g_event_count == 0);
+
+    /* Press BTN_EXTRA while BTN_SIDE is held: both held -> should arm! */
+    struct input_event ev_extra_down = { .type = EV_KEY, .code = BTN_EXTRA, .value = 1 };
+    scroll_engine_process_event(&engine, &dummy_ctx, &ev_extra_down);
+    assert(engine.button_pressed == true);
+    assert(engine.btn_side_down == true);
+    assert(engine.btn_extra_down == true);
+    assert(engine.scrolling_active == false);
+
+    printf(" -> Passed!\n");
+}
+
+static void test_chord_modifier_no_click_when_one_button_still_held(void) {
+    printf("Running test_chord_modifier_no_click_when_one_button_still_held...\n");
+    AppConfig cfg;
+    config_set_defaults(&cfg);
+    cfg.scroll_mod_mode = SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS;
+    cfg.emulate_click = true;
+    cfg.emulated_click_button = BTN_MIDDLE;
+
+    ScrollEngine engine;
+    scroll_engine_init(&engine, &cfg);
+    DeviceContext dummy_ctx;
+    reset_test_events();
+
+    /* 1. Press both buttons to arm chord */
+    struct input_event ev_side_down = { .type = EV_KEY, .code = BTN_SIDE, .value = 1 };
+    struct input_event ev_extra_down = { .type = EV_KEY, .code = BTN_EXTRA, .value = 1 };
+    scroll_engine_process_event(&engine, &dummy_ctx, &ev_side_down);
+    scroll_engine_process_event(&engine, &dummy_ctx, &ev_extra_down);
+    assert(engine.button_pressed == true);
+    reset_test_events();
+
+    /* 2. Release one button (BTN_SIDE): button_pressed remains true, NO click emitted */
+    struct input_event ev_side_up = { .type = EV_KEY, .code = BTN_SIDE, .value = 0 };
+    scroll_engine_process_event(&engine, &dummy_ctx, &ev_side_up);
+    assert(engine.button_pressed == true);
+    assert(engine.btn_side_down == false);
+    assert(engine.btn_extra_down == true);
+    assert(g_event_count == 0);
+
+    /* 3. Release second button (BTN_EXTRA): chord completely released -> emit emulated click once */
+    struct input_event ev_extra_up = { .type = EV_KEY, .code = BTN_EXTRA, .value = 0 };
+    scroll_engine_process_event(&engine, &dummy_ctx, &ev_extra_up);
+    assert(engine.button_pressed == false);
+    assert(engine.btn_side_down == false);
+    assert(engine.btn_extra_down == false);
+    /* Should have emitted single click: BTN_MIDDLE(1), SYN, BTN_MIDDLE(0), SYN */
+    assert(g_event_count == 4);
+    assert(g_events[0].type == EV_KEY && g_events[0].code == BTN_MIDDLE && g_events[0].value == 1);
+    assert(g_events[1].type == EV_SYN && g_events[1].code == SYN_REPORT);
+    assert(g_events[2].type == EV_KEY && g_events[2].code == BTN_MIDDLE && g_events[2].value == 0);
+    assert(g_events[3].type == EV_SYN && g_events[3].code == SYN_REPORT);
+
+    printf(" -> Passed!\n");
+}
+
+static void test_reverse_scroll_sign_is_only_applied_at_emission(void) {
+    printf("Running test_reverse_scroll_sign_is_only_applied_at_emission...\n");
+    AppConfig cfg;
+    config_set_defaults(&cfg);
+    cfg.scroll_button = BTN_SIDE;
+    cfg.v_sensitivity = 30;
+    cfg.reverse_scroll = true;
+    cfg.smooth_scroll = false;
+
+    ScrollEngine engine;
+    scroll_engine_init(&engine, &cfg);
+    DeviceContext dummy_ctx;
+    reset_test_events();
+
+    /* Press modifier */
+    struct input_event ev_down = { .type = EV_KEY, .code = BTN_SIDE, .value = 1 };
+    scroll_engine_process_event(&engine, &dummy_ctx, &ev_down);
+    reset_test_events();
+
+    /* Move physical Y down by +40 */
+    struct input_event ev_rel = { .type = EV_REL, .code = REL_Y, .value = 40 };
+    scroll_engine_process_event(&engine, &dummy_ctx, &ev_rel);
+
+    /* Physical accumulator must accumulate raw physical direction:
+     * raw delta was +40. 40 / 30 = 1 step. Remainder: 40 - 30 = +10.
+     * accum_y must be +10 (NOT negative).
+     */
+    assert(engine.accum_y == 10);
+    assert(engine.scrolling_active == true);
+
+    /* But emitted REL_WHEEL should be reversed: normal down is -1, reversed is +1 */
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_REL && g_events[0].code == REL_WHEEL && g_events[0].value == 1);
+    assert(g_events[1].type == EV_SYN && g_events[1].code == SYN_REPORT);
+
+    printf(" -> Passed!\n");
+}
+
+static void test_default_config_targets_tbc21(void) {
+    printf("Running test_default_config_targets_tbc21...\n");
+    AppConfig cfg;
+    config_set_defaults(&cfg);
+
+    assert(strcmp(cfg.device_name, "Logitech USB Trackball") == 0);
+    assert(cfg.scroll_button == BTN_SIDE);
+    assert(cfg.scroll_mod_mode == SCROLL_MOD_SINGLE_BUTTON);
+    assert(cfg.emulate_click == true);
+    assert(cfg.emulated_click_button == BTN_MIDDLE);
+    assert(cfg.v_sensitivity == 50);
+    assert(cfg.h_sensitivity == 200);
+    assert(cfg.reverse_scroll == false);
+    assert(cfg.smooth_scroll == false);
+
+    printf(" -> Passed!\n");
+}
+
 int main(void) {
     printf("===========================================\n");
     printf("  Scroll My Marbles - Scroll Engine Unit Tests\n");
@@ -291,6 +428,10 @@ int main(void) {
     test_reverse_scrolling();
     test_button_remapping();
     test_passthrough_when_not_held();
+    test_chord_modifier_arms_on_both_buttons();
+    test_chord_modifier_no_click_when_one_button_still_held();
+    test_reverse_scroll_sign_is_only_applied_at_emission();
+    test_default_config_targets_tbc21();
     printf("===========================================\n");
     printf("  ALL TESTS PASSED SUCCESSFULLY!\n");
     printf("===========================================\n");

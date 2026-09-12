@@ -26,18 +26,30 @@ void scroll_engine_update_config(ScrollEngine *engine, const AppConfig *cfg) {
     }
 }
 
-static bool is_scroll_modifier(const ScrollEngine *engine, uint16_t code) {
-    if (code == engine->config.scroll_button) return true;
+static bool is_scroll_modifier_pressed(const ScrollEngine *e) {
+    if (e->config.scroll_mod_mode == SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS) {
+        return e->btn_side_down && e->btn_extra_down;
+    } else {
+        if (e->config.scroll_button == BTN_SIDE) {
+            return e->btn_side_down;
+        } else if (e->config.scroll_button == BTN_EXTRA) {
+            return e->btn_extra_down;
+        }
+        return false;
+    }
+}
 
-    if (code == BTN_SIDE && engine->config.btn_side_action == BUTTON_ACTION_SCROLL_MODIFIER)
-        return true;
-    if (code == BTN_EXTRA && engine->config.btn_extra_action == BUTTON_ACTION_SCROLL_MODIFIER)
-        return true;
-    if (code == BTN_MIDDLE && engine->config.btn_middle_action == BUTTON_ACTION_SCROLL_MODIFIER)
-        return true;
-    if (code == BTN_RIGHT && engine->config.btn_right_action == BUTTON_ACTION_SCROLL_MODIFIER)
-        return true;
-
+static bool should_swallow_button(const ScrollEngine *engine, uint16_t code) {
+    if (engine->button_pressed) {
+        if (code == BTN_SIDE || code == BTN_EXTRA) return true;
+    }
+    if (engine->config.scroll_mod_mode == SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS) {
+        if (code == BTN_SIDE || code == BTN_EXTRA) return true;
+    } else {
+        if (code == engine->config.scroll_button) return true;
+        if (code == BTN_SIDE && engine->config.btn_side_action == BUTTON_ACTION_SCROLL_MODIFIER) return true;
+        if (code == BTN_EXTRA && engine->config.btn_extra_action == BUTTON_ACTION_SCROLL_MODIFIER) return true;
+    }
     return false;
 }
 
@@ -53,38 +65,72 @@ void scroll_engine_process_event(ScrollEngine *engine, DeviceContext *ctx, const
     if (!engine || !ctx || !ev) return;
 
     if (ev->type == EV_KEY) {
-        if (is_scroll_modifier(engine, ev->code)) {
-            if (ev->value == 1) {
-                /* Button pressed down: enter scroll intercept mode */
-                engine->button_pressed = true;
-                engine->scrolling_active = false;
-                engine->accum_x = 0;
-                engine->accum_y = 0;
-                return;
-            } else if (ev->value == 0) {
-                /* Button released */
-                engine->button_pressed = false;
+        if (ev->code == BTN_SIDE || ev->code == BTN_EXTRA) {
+            bool was_armed = engine->button_pressed;
 
-                if (!engine->scrolling_active && engine->config.emulate_click) {
-                    /* Emulate click because no scrolling occurred */
-                    uint16_t click_btn = engine->config.emulated_click_button;
-                    device_emit_event(ctx, EV_KEY, click_btn, 1);
-                    device_emit_syn(ctx);
-                    device_emit_event(ctx, EV_KEY, click_btn, 0);
-                    device_emit_syn(ctx);
+            if (ev->value == 1) {
+                if (ev->code == BTN_SIDE) engine->btn_side_down = true;
+                else if (ev->code == BTN_EXTRA) engine->btn_extra_down = true;
+
+                if (is_scroll_modifier_pressed(engine)) {
+                    if (!engine->button_pressed) {
+                        engine->button_pressed = true;
+                        engine->scrolling_active = false;
+                        engine->accum_x = 0;
+                        engine->accum_y = 0;
+                    }
                 }
-                return;
+
+                if (should_swallow_button(engine, ev->code) || engine->button_pressed) {
+                    return;
+                }
+            } else if (ev->value == 0) {
+                if (ev->code == BTN_SIDE) engine->btn_side_down = false;
+                else if (ev->code == BTN_EXTRA) engine->btn_extra_down = false;
+
+                if (engine->config.scroll_mod_mode == SCROLL_MOD_CHORD_BOTH_SIDE_BUTTONS) {
+                    if (engine->button_pressed) {
+                        if (!engine->btn_side_down && !engine->btn_extra_down) {
+                            if (!engine->scrolling_active && engine->config.emulate_click) {
+                                uint16_t click_btn = engine->config.emulated_click_button;
+                                device_emit_event(ctx, EV_KEY, click_btn, 1);
+                                device_emit_syn(ctx);
+                                device_emit_event(ctx, EV_KEY, click_btn, 0);
+                                device_emit_syn(ctx);
+                            }
+                            engine->button_pressed = false;
+                            engine->scrolling_active = false;
+                        }
+                    }
+                } else {
+                    /* Single button mode */
+                    if (engine->button_pressed && !is_scroll_modifier_pressed(engine)) {
+                        if (!engine->scrolling_active && engine->config.emulate_click) {
+                            uint16_t click_btn = engine->config.emulated_click_button;
+                            device_emit_event(ctx, EV_KEY, click_btn, 1);
+                            device_emit_syn(ctx);
+                            device_emit_event(ctx, EV_KEY, click_btn, 0);
+                            device_emit_syn(ctx);
+                        }
+                        engine->button_pressed = false;
+                        engine->scrolling_active = false;
+                    }
+                }
+
+                if (was_armed || should_swallow_button(engine, ev->code)) {
+                    return;
+                }
             } else if (ev->value == 2) {
-                /* Ignore autorepeat for modifier */
-                return;
+                if (should_swallow_button(engine, ev->code) || engine->button_pressed) {
+                    return;
+                }
             }
         }
 
-        /* Not scroll modifier: check remapping */
+        /* Remapping and pass-through for other buttons or non-swallowed events */
         ButtonAction action = get_button_action(engine, ev->code);
         switch (action) {
             case BUTTON_ACTION_DISABLED:
-                /* Drop event */
                 return;
             case BUTTON_ACTION_LEFT_CLICK:
                 device_emit_event(ctx, EV_KEY, BTN_LEFT, ev->value);
@@ -107,7 +153,6 @@ void scroll_engine_process_event(ScrollEngine *engine, DeviceContext *ctx, const
                 device_emit_syn(ctx);
                 return;
             case BUTTON_ACTION_SCROLL_MODIFIER:
-                /* Already handled above */
                 return;
             case BUTTON_ACTION_PASSTHROUGH:
             default:
@@ -119,23 +164,30 @@ void scroll_engine_process_event(ScrollEngine *engine, DeviceContext *ctx, const
             /* Suppress cursor motion and calculate scrolling */
             if (ev->code == REL_Y) {
                 int dy = ev->value;
-                engine->accum_y += engine->config.reverse_scroll ? -dy : dy;
+                engine->accum_y += dy;
 
                 if (abs(engine->accum_y) >= engine->effective_sens_y) {
                     int steps = engine->accum_y / engine->effective_sens_y;
                     engine->accum_y -= steps * engine->effective_sens_y;
                     engine->scrolling_active = true;
 
-                    /* Linux evdev convention:
-                     * Moving trackball down (positive dy) -> scroll down (-steps)
-                     * Moving trackball up (negative dy) -> scroll up (+steps)
-                     */
+                    if (!engine->config.smooth_scroll) {
+                        engine->accum_x = 0;
+                    }
+
                     int wheel_val = -steps;
+                    if (engine->config.reverse_scroll) {
+                        wheel_val = -wheel_val;
+                    }
                     device_emit_event(ctx, EV_REL, REL_WHEEL, wheel_val);
 
 #ifdef REL_WHEEL_HI_RES
                     if (engine->config.smooth_scroll) {
-                        device_emit_event(ctx, EV_REL, REL_WHEEL_HI_RES, -steps * engine->effective_delta);
+                        int hi_res_val = -steps * engine->effective_delta;
+                        if (engine->config.reverse_scroll) {
+                            hi_res_val = -hi_res_val;
+                        }
+                        device_emit_event(ctx, EV_REL, REL_WHEEL_HI_RES, hi_res_val);
                     }
 #endif
                     device_emit_syn(ctx);
@@ -143,7 +195,7 @@ void scroll_engine_process_event(ScrollEngine *engine, DeviceContext *ctx, const
                 return;
             } else if (ev->code == REL_X) {
                 int dx = ev->value;
-                engine->accum_x += engine->config.reverse_scroll ? -dx : dx;
+                engine->accum_x += dx;
 
                 if (abs(engine->accum_x) >= engine->effective_sens_x) {
                     int steps = engine->accum_x / engine->effective_sens_x;
@@ -151,27 +203,28 @@ void scroll_engine_process_event(ScrollEngine *engine, DeviceContext *ctx, const
                     engine->scrolling_active = true;
 
                     if (!engine->config.smooth_scroll) {
-                        /* Cancel out perpendicular movement in detent mode */
                         engine->accum_y = 0;
                     }
 
-                    /* Linux evdev convention:
-                     * Moving trackball right (positive dx) -> scroll right (+steps)
-                     * Moving trackball left (negative dx) -> scroll left (-steps)
-                     */
                     int hwheel_val = steps;
+                    if (engine->config.reverse_scroll) {
+                        hwheel_val = -hwheel_val;
+                    }
                     device_emit_event(ctx, EV_REL, REL_HWHEEL, hwheel_val);
 
 #ifdef REL_HWHEEL_HI_RES
                     if (engine->config.smooth_scroll) {
-                        device_emit_event(ctx, EV_REL, REL_HWHEEL_HI_RES, steps * engine->effective_delta);
+                        int hi_res_val = steps * engine->effective_delta;
+                        if (engine->config.reverse_scroll) {
+                            hi_res_val = -hi_res_val;
+                        }
+                        device_emit_event(ctx, EV_REL, REL_HWHEEL_HI_RES, hi_res_val);
                     }
 #endif
                     device_emit_syn(ctx);
                 }
                 return;
             }
-            /* Suppress other relative motion while scrolling */
             return;
         } else {
             /* Normal mouse motion */
@@ -180,14 +233,12 @@ void scroll_engine_process_event(ScrollEngine *engine, DeviceContext *ctx, const
         }
     } else if (ev->type == EV_SYN) {
         if (engine->button_pressed) {
-            /* Handled per emitted event above */
             return;
         } else {
             device_emit_syn(ctx);
             return;
         }
     } else {
-        /* Forward any other events untouched */
         device_emit_event(ctx, ev->type, ev->code, ev->value);
     }
 }

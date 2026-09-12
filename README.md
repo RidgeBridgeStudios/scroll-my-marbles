@@ -1,10 +1,20 @@
 # Scroll My Marbles
 
-**Scroll My Marbles** is an alternative scrolling and button remapping solution for Linux pointing devices without a dedicated physical scroll wheel, specifically designed for the **Logitech TrackMan Marble FX** trackball (and compatible with other trackballs and mice).
+**Scroll My Marbles** is an alternative scrolling and button remapping solution for Linux pointing devices without a dedicated physical scroll wheel, specifically designed for the **Logitech TrackMan Marble T-BC21** ("Marble Mouse", 4-button) and **Logitech TrackMan Marble FX** trackballs (and compatible with other trackballs and mice).
 
-It allows you to scroll vertically and horizontally across all applications by simply holding down a configurable modifier button (default: Middle Button) and rolling the trackball. If you click the button without moving the ball, it emulates a normal middle click.
+It allows you to scroll vertically and horizontally across all applications by simply holding down a configurable modifier button (default: Small Left side button / `BTN_SIDE` on T-BC21) and rolling the trackball. If you click the button without moving the ball, it emulates a normal middle click.
 
 Inspired by and translating the core logic of [TBScroll](https://github.com/spitfirex86/TBScroll) to Linux, **Scroll My Marbles** operates at the native kernel `evdev`/`uinput` layer, providing universal compatibility on both **Wayland** (GNOME, Zorin, KDE Plasma, Sway, etc.) and **X11** sessions without needing root privileges.
+
+---
+
+## Supported Devices
+
+| Device | USB VID:PID | Default Modifier | Notes |
+| :--- | :--- | :--- | :--- |
+| **Logitech TrackMan Marble T-BC21** ("Marble Mouse", 4-button) | `046d:c408` | `BTN_SIDE` (Small Left) | Primary target. Kernel name: "Logitech USB Trackball" |
+| **Logitech TrackMan Marble FX** | `046d:c401` | `BTN_MIDDLE` | Supported |
+| **Generic USB Trackball** | Any | `BTN_SIDE` / `BTN_MIDDLE` | Fallback match for input devices with trackball attributes |
 
 ---
 
@@ -84,7 +94,7 @@ curl -fsSL https://raw.githubusercontent.com/RidgeBridgeStudios/scroll-my-marble
 ### 📦 Option 2: Download & Install the `.deb` Package (Ubuntu, Debian, Linux Mint, Zorin OS, Pop!_OS)
 
 1. Open the **[GitHub Releases Tab](https://github.com/RidgeBridgeStudios/scroll-my-marbles/releases)**.
-2. Under **Assets**, click to download **`scroll-my-marbles_1.0.0_amd64.deb`**.
+2. Under **Assets**, click to download **`scroll-my-marbles_1.1.0_amd64.deb`**.
 3. Install it using either method:
    - **Graphical**: Double-click the downloaded `.deb` file to open it in your Software Center / App Center, then click **Install**.
    - **Terminal**: Open the folder where the file downloaded (e.g. `Downloads`) and run:
@@ -98,12 +108,15 @@ curl -fsSL https://raw.githubusercontent.com/RidgeBridgeStudios/scroll-my-marble
 ### 🖱️ First-Time Use & Beginner Tips
 
 1. **How to Scroll**:
-   - **Hold down the Middle Button** (default) and **roll the trackball** to scroll vertically or horizontally.
-   - **Click & release without rolling** sends a normal middle click (e.g., to open a link in a new browser tab or close a tab).
-2. **Device Permission Setup (Important)**:
+   - **Hold down the Small Left side button** (`BTN_SIDE`, default on T-BC21) and **roll the trackball** to scroll vertically or horizontally.
+   - You can also choose the **Small Right side button** (`BTN_EXTRA`) or chord **Both Side Buttons** (`ScrollModifierMode=ChordBothSideButtons`) in the Settings window.
+   - **Click & release without rolling** sends an emulated middle click (e.g., to open a link in a new browser tab or close a tab).
+2. **Device Detection & Kernel Name**:
+   - The Logitech TrackMan Marble T-BC21 identifies over USB with VID:PID `046d:c408`. In the Linux kernel, its device name is `"Logitech USB Trackball"` (or `"USB Trackball"`). Scroll My Marbles automatically detects and binds to this device out of the box using its USB VID/PID.
+3. **Device Permission Setup (Important)**:
    - The installer automatically configures hardware rules (`/lib/udev/rules.d/99-scroll-my-marbles.rules`).
    - If scrolling doesn't respond on your very first run, simply **unplug and reconnect your trackball** (or log out and back in) so Linux refreshes its device permissions.
-3. **Tray Icon & Autostart on Login**:
+4. **Tray Icon & Autostart on Login**:
    - Scroll My Marbles runs in your system tray / notification area.
    - Click the tray icon to open **Settings** and toggle **"Autostart on Login"** so scrolling is always active whenever you boot your computer.
 
@@ -147,8 +160,8 @@ Run the automated build script to compile, run tests, and produce packages:
 ./build.sh
 ```
 This generates:
-- `scroll-my-marbles_1.0.0_amd64.deb`
-- `scroll-my-marbles-1.0.0-linux-x86_64.tar.gz`
+- `scroll-my-marbles_1.1.0_amd64.deb`
+- `scroll-my-marbles-1.1.0-linux-x86_64.tar.gz`
 - `SHA256SUMS.txt`
 
 ### 3. Manual Build with Meson & Ninja
@@ -167,6 +180,14 @@ To allow running as a normal user without `sudo`, the udev rule (`/lib/udev/rule
 
 ```udev
 KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+
+# Logitech TrackMan Marble T-BC21 ("Marble Mouse", 4-button) USB VID:PID
+SUBSYSTEM=="input", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c408", TAG+="uaccess", ENV{ID_INPUT_TRACKBALL}="1"
+
+# Logitech TrackMan Marble FX USB VID:PID
+SUBSYSTEM=="input", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c401", TAG+="uaccess", ENV{ID_INPUT_TRACKBALL}="1"
+
+# Fallback name and attribute matching
 SUBSYSTEM=="input", ATTRS{name}=="*TrackMan Marble*", TAG+="uaccess"
 SUBSYSTEM=="input", ATTRS{name}=="*Marble FX*", TAG+="uaccess"
 SUBSYSTEM=="input", ATTRS{name}=="*Logitech TrackMan*", TAG+="uaccess"
@@ -217,23 +238,33 @@ Settings are stored in INI format at:
 Example configuration:
 ```ini
 [General]
-DeviceName=Logitech TrackMan Marble FX
+DeviceName=Logitech USB Trackball
 DevicePath=
-VSensitivity=20
-HSensitivity=120
+VSensitivity=50
+HSensitivity=200
 ReverseScroll=false
 SmoothScroll=false
-ScrollButton=BTN_MIDDLE
+ScrollButton=BTN_SIDE
+ScrollModifierMode=SingleButton
 EmulateClick=true
 EmulatedClickButton=BTN_MIDDLE
 Autostart=true
 
 [Buttons]
-Button4Action=MiddleClick
-Button5Action=PassThrough
-Button3Action=ScrollModifier
+Button4Action=ScrollModifier
+Button5Action=ScrollModifier
+Button3Action=PassThrough
 Button2Action=PassThrough
 ```
+
+### Configuration Options
+- `ScrollModifierMode`:
+  - `SingleButton`: Hold down `ScrollButton` (e.g. `BTN_SIDE` or `BTN_EXTRA`) to scroll.
+  - `ChordBothSideButtons`: Press both small side buttons (`BTN_SIDE` and `BTN_EXTRA`) simultaneously to scroll.
+- `ScrollButton`: The modifier button code when `ScrollModifierMode` is set to `SingleButton` (defaults to `BTN_SIDE`).
+- `EmulateClick`: If true, releasing the scroll modifier without moving the ball emits a click of `EmulatedClickButton`.
+- `EmulatedClickButton`: Button code to emit on release without movement (defaults to `BTN_MIDDLE`).
+- `VSensitivity` / `HSensitivity`: Accumulated motion thresholds before emitting a vertical / horizontal scroll detent (defaults to 50 / 200).
 
 ### Supported Button Action Values
 - `PassThrough`: Forwards the physical button untouched.
