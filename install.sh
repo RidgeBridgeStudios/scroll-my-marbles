@@ -74,6 +74,7 @@ do_uninstall() {
         sudo rm -f "/lib/udev/rules.d/99-scroll-my-marbles.rules"
         sudo rm -f "/usr/lib/udev/rules.d/99-scroll-my-marbles.rules"
         sudo rm -rf "/usr/share/icons/hicolor"/*/apps/"${PACKAGE_NAME}".*
+        sudo rm -rf "/usr/share/scroll-my-marbles"
     fi
 
     if command -v udevadm >/dev/null 2>&1; then

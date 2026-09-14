@@ -53,23 +53,25 @@ mkdir -p "${STAGING_DIR}/DEBIAN"
 mkdir -p "${STAGING_DIR}/usr/bin"
 mkdir -p "${STAGING_DIR}/usr/share/applications"
 mkdir -p "${STAGING_DIR}/usr/share/icons/hicolor"
+mkdir -p "${STAGING_DIR}/usr/share/scroll-my-marbles"
 mkdir -p "${STAGING_DIR}/lib/udev/rules.d"
 mkdir -p "${STAGING_DIR}/usr/share/doc/${PACKAGE_NAME}"
 
 # Install compiled binary
 cp -a "${BUILD_DIR}/scroll-my-marbles" "${STAGING_DIR}/usr/bin/"
 
-# Install desktop entry and udev rule
+# Install desktop entry, udev rule and branding asset
 cp -a "${SCRIPT_DIR}/data/scroll-my-marbles.desktop" "${STAGING_DIR}/usr/share/applications/"
 cp -a "${SCRIPT_DIR}/data/99-scroll-my-marbles.rules" "${STAGING_DIR}/lib/udev/rules.d/"
+cp -a "${SCRIPT_DIR}/data/branding/ridgebridge-studios.png" "${STAGING_DIR}/usr/share/scroll-my-marbles/"
 
 # Install icons
 cp -r "${SCRIPT_DIR}/data/icons/hicolor/"* "${STAGING_DIR}/usr/share/icons/hicolor/"
 
 # Install Debian control and maintainer files
-cat << 'EOF' > "${STAGING_DIR}/DEBIAN/control"
+cat << EOF > "${STAGING_DIR}/DEBIAN/control"
 Package: scroll-my-marbles
-Version: 1.0.0
+Version: ${PACKAGE_VERSION}
 Architecture: amd64
 Maintainer: RidgeBridgeStudios <contact@example.com>
 Section: utils
@@ -116,11 +118,13 @@ rm -rf "$TAR_STAGING"
 mkdir -p "${TAR_STAGING}/bin"
 mkdir -p "${TAR_STAGING}/share/applications"
 mkdir -p "${TAR_STAGING}/share/icons"
+mkdir -p "${TAR_STAGING}/share/scroll-my-marbles"
 mkdir -p "${TAR_STAGING}/udev"
 
 cp -a "${BUILD_DIR}/scroll-my-marbles" "${TAR_STAGING}/bin/"
 cp -a "${SCRIPT_DIR}/data/scroll-my-marbles.desktop" "${TAR_STAGING}/share/applications/"
 cp -r "${SCRIPT_DIR}/data/icons/hicolor" "${TAR_STAGING}/share/icons/"
+cp -a "${SCRIPT_DIR}/data/branding/ridgebridge-studios.png" "${TAR_STAGING}/share/scroll-my-marbles/"
 cp -a "${SCRIPT_DIR}/data/99-scroll-my-marbles.rules" "${TAR_STAGING}/udev/"
 cp -a "${SCRIPT_DIR}/install.sh" "${TAR_STAGING}/"
 cp -a "${SCRIPT_DIR}/README.md" "${TAR_STAGING}/"

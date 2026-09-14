@@ -1,4 +1,5 @@
 usr/bin/scroll-my-marbles
 usr/share/applications/scroll-my-marbles.desktop
 usr/share/icons/hicolor/*/apps/scroll-my-marbles.*
+usr/share/scroll-my-marbles/*
 lib/udev/rules.d/99-scroll-my-marbles.rules

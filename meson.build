@@ -37,6 +37,7 @@ executable(
   'scroll-my-marbles',
   src_files,
   include_directories: inc_dirs,
+  c_args: ['-DAPP_VERSION="@0@"'.format(meson.project_version())],
   dependencies: [
     glib_dep,
     gio_dep,
@@ -73,6 +74,12 @@ endforeach
 install_data(
   'data/icons/hicolor/scalable/apps/scroll-my-marbles.svg',
   install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps',
+)
+
+# Branding logo used by the in-app About page
+install_data(
+  'data/branding/ridgebridge-studios.png',
+  install_dir: get_option('datadir') / 'scroll-my-marbles',
 )
 
 # Unit Tests

@@ -20,6 +20,7 @@ struct SettingsWindow {
     AdwComboRow *btn4_action_combo;
     AdwComboRow *btn5_action_combo;
     AdwSwitchRow *autostart_switch;
+    AdwPreferencesPage *about_page;
 
     DeviceInfo *scanned_devices;
     int scanned_count;
@@ -217,37 +218,187 @@ GtkWindow *settings_window_get_window(SettingsWindow *win) {
     return GTK_WINDOW(win->pref_win);
 }
 
-void settings_window_show_about(GtkWindow *parent) {
-    const char *developers[] = { "RidgeBridgeStudios", "Spitfire_x86 (original TBScroll)", NULL };
-    GtkWidget *parent_widget = parent ? GTK_WIDGET(parent) : NULL;
-    if (!parent_widget) {
-        GApplication *app = g_application_get_default();
-        if (app && GTK_IS_APPLICATION(app)) {
-            GtkWindow *active = gtk_application_get_active_window(GTK_APPLICATION(app));
-            if (active) parent_widget = GTK_WIDGET(active);
-        }
+/* --- About page ------------------------------------------------------- */
+
+static GdkTexture *try_load_texture(const char *path) {
+    GFile *file = g_file_new_for_path(path);
+    GdkTexture *texture = gdk_texture_new_from_file(file, NULL);
+    g_object_unref(file);
+    return texture; /* NULL when the file is missing or unreadable */
+}
+
+/*
+ * Locate the RidgeBridge Studios branding logo without GResources:
+ *   1. installed data dirs (deb / meson install: <datadir>/scroll-my-marbles/)
+ *   2. portable tarball layout next to the binary (<exe>/../share/)
+ *   3. development build tree (<exe>/../data/branding/)
+ */
+static GdkTexture *load_branding_texture(void) {
+    GdkTexture *texture = NULL;
+    const char * const *data_dirs = g_get_system_data_dirs();
+
+    for (guint i = 0; !texture && data_dirs && data_dirs[i]; i++) {
+        char *path = g_build_filename(data_dirs[i], "scroll-my-marbles", "ridgebridge-studios.png", NULL);
+        texture = try_load_texture(path);
+        g_free(path);
     }
 
-    adw_show_about_dialog(
-        parent_widget,
-        "application-name", "Scroll My Marbles",
-        "application-icon", "scroll-my-marbles",
-        "developer-name", "RidgeBridgeStudios",
-        "version", "1.1.0",
-        "copyright", "© 2026 RidgeBridgeStudios",
-        "license-type", GTK_LICENSE_MIT_X11,
-        "website", "https://github.com/RidgeBridgeStudios/scroll-my-marbles",
-        "issue-url", "https://github.com/RidgeBridgeStudios/scroll-my-marbles/issues",
-        "comments", "Smooth scrolling and button mapping for the Logitech TrackMan Marble T-BC21 and Marble FX trackballs on Linux.",
-        "developers", developers,
-        NULL
-    );
+    char *exe = g_file_read_link("/proc/self/exe", NULL);
+    if (exe) {
+        char *exe_dir = g_path_get_dirname(exe);
+        static const char *relative_candidates[] = {
+            "../share/scroll-my-marbles/ridgebridge-studios.png",
+            "../data/branding/ridgebridge-studios.png",
+        };
+        for (guint i = 0; !texture && i < G_N_ELEMENTS(relative_candidates); i++) {
+            char *path = g_build_filename(exe_dir, relative_candidates[i], NULL);
+            texture = try_load_texture(path);
+            g_free(path);
+        }
+        g_free(exe_dir);
+        g_free(exe);
+    }
+
+    return texture;
+}
+
+static GtkWidget *make_about_row(const char *title, const char *subtitle) {
+    AdwActionRow *row = ADW_ACTION_ROW(adw_action_row_new());
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(row), title);
+    if (subtitle) {
+        adw_action_row_set_subtitle(row, subtitle);
+    }
+    return GTK_WIDGET(row);
+}
+
+static GtkWidget *make_link_button(const char *label, const char *uri) {
+    GtkWidget *btn = gtk_link_button_new_with_label(uri, label);
+    gtk_widget_set_valign(btn, GTK_ALIGN_CENTER);
+    return btn;
+}
+
+static void build_about_page(SettingsWindow *win) {
+    AdwPreferencesPage *page = ADW_PREFERENCES_PAGE(adw_preferences_page_new());
+    adw_preferences_page_set_title(page, "About");
+    adw_preferences_page_set_icon_name(page, "help-about-symbolic");
+    win->about_page = page;
+
+    /* --- App identity header --- */
+    AdwPreferencesGroup *identity_group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+
+    GtkWidget *identity = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    gtk_widget_set_margin_top(identity, 20);
+    gtk_widget_set_margin_bottom(identity, 10);
+
+    GtkWidget *app_icon = gtk_image_new_from_icon_name("scroll-my-marbles");
+    gtk_image_set_pixel_size(GTK_IMAGE(app_icon), 96);
+    gtk_widget_set_halign(app_icon, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_bottom(app_icon, 6);
+    gtk_box_append(GTK_BOX(identity), app_icon);
+
+    GtkWidget *name_label = gtk_label_new("Scroll My Marbles");
+    gtk_widget_add_css_class(name_label, "title-2");
+    gtk_widget_set_halign(name_label, GTK_ALIGN_CENTER);
+    gtk_box_append(GTK_BOX(identity), name_label);
+
+    char version_text[64];
+    snprintf(version_text, sizeof(version_text), "Version %s", APP_VERSION);
+    GtkWidget *version_label = gtk_label_new(version_text);
+    gtk_widget_add_css_class(version_label, "dim-label");
+    gtk_widget_set_halign(version_label, GTK_ALIGN_CENTER);
+    gtk_box_append(GTK_BOX(identity), version_label);
+
+    GtkWidget *desc_label = gtk_label_new(
+        "Smooth scrolling and button mapping for the Logitech TrackMan Marble "
+        "T-BC21 and Marble FX trackballs on Linux.");
+    gtk_label_set_wrap(GTK_LABEL(desc_label), TRUE);
+    gtk_label_set_justify(GTK_LABEL(desc_label), GTK_JUSTIFY_CENTER);
+    gtk_label_set_max_width_chars(GTK_LABEL(desc_label), 48);
+    gtk_label_set_xalign(GTK_LABEL(desc_label), 0.5f);
+    gtk_widget_add_css_class(desc_label, "dim-label");
+    gtk_widget_set_margin_top(desc_label, 6);
+    gtk_box_append(GTK_BOX(identity), desc_label);
+
+    adw_preferences_group_add(identity_group, identity);
+    adw_preferences_page_add(page, identity_group);
+
+    /* --- Publisher (with RidgeBridge Studios logo) --- */
+    AdwPreferencesGroup *publisher_group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(publisher_group, "Publisher");
+
+    GdkTexture *logo = load_branding_texture();
+    if (logo) {
+        GtkWidget *logo_image = gtk_image_new_from_paintable(GDK_PAINTABLE(logo));
+        gtk_image_set_pixel_size(GTK_IMAGE(logo_image), 160);
+        gtk_widget_set_halign(logo_image, GTK_ALIGN_CENTER);
+        gtk_widget_set_margin_top(logo_image, 12);
+        gtk_widget_set_margin_bottom(logo_image, 6);
+        adw_preferences_group_add(publisher_group, logo_image);
+        g_object_unref(logo);
+    }
+    adw_preferences_group_add(publisher_group, make_about_row("RidgeBridge Studios", NULL));
+    adw_preferences_page_add(page, publisher_group);
+
+    /* --- Lead Developer --- */
+    AdwPreferencesGroup *dev_group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(dev_group, "Lead Developer");
+
+    GtkWidget *dev_row = make_about_row("Gabriel Foss", "emanuelgabrielfoss@gmail.com");
+    adw_action_row_add_suffix(ADW_ACTION_ROW(dev_row),
+                              make_link_button("Email", "mailto:emanuelgabrielfoss@gmail.com"));
+    adw_preferences_group_add(dev_group, dev_row);
+    adw_preferences_page_add(page, dev_group);
+
+    /* --- Built with --- */
+    static const struct {
+        const char *title;
+        const char *subtitle;
+    } built_with[] = {
+        { "C, GLib &amp; GIO", "Application core and event loop" },
+        { "GTK 4 &amp; libadwaita", "Settings user interface" },
+        { "libevdev &amp; uinput", "Trackball capture and scroll event emulation" },
+        { "Meson", "Build system" },
+        { "TBScroll by Spitfire_x86", "Original scroll engine logic this project builds upon" },
+    };
+
+    AdwPreferencesGroup *built_group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(built_group, "Built with");
+    for (guint i = 0; i < G_N_ELEMENTS(built_with); i++) {
+        adw_preferences_group_add(built_group, make_about_row(built_with[i].title, built_with[i].subtitle));
+    }
+    adw_preferences_page_add(page, built_group);
+
+    /* --- License --- */
+    AdwPreferencesGroup *license_group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(license_group, "License");
+    adw_preferences_group_add(license_group,
+                              make_about_row("MIT", "MIT License"));
+    adw_preferences_group_add(license_group, make_about_row("© 2026 RidgeBridge Studios", NULL));
+
+    GtkWidget *website_row = make_about_row("Project Website", "Source code and releases on GitHub");
+    adw_action_row_add_suffix(ADW_ACTION_ROW(website_row),
+                              make_link_button("GitHub", "https://github.com/RidgeBridgeStudios/scroll-my-marbles"));
+    adw_preferences_group_add(license_group, website_row);
+
+    GtkWidget *issue_row = make_about_row("Report an Issue", "Bug reports and feature requests");
+    adw_action_row_add_suffix(ADW_ACTION_ROW(issue_row),
+                              make_link_button("Issues", "https://github.com/RidgeBridgeStudios/scroll-my-marbles/issues"));
+    adw_preferences_group_add(license_group, issue_row);
+    adw_preferences_page_add(page, license_group);
+
+    adw_preferences_window_add(win->pref_win, page);
+}
+
+void settings_window_show_about_page(SettingsWindow *win) {
+    if (!win || !win->pref_win || !win->about_page) return;
+    adw_preferences_window_set_visible_page(win->pref_win, win->about_page);
+    gtk_window_present(GTK_WINDOW(win->pref_win));
 }
 
 static void on_about_clicked(GtkButton *btn, gpointer user_data) {
     (void)btn;
     SettingsWindow *win = (SettingsWindow *)user_data;
-    settings_window_show_about(GTK_WINDOW(win->pref_win));
+    settings_window_show_about_page(win);
 }
 
 static gboolean on_close_request(GtkWindow *window, gpointer user_data) {
@@ -272,6 +423,9 @@ SettingsWindow *settings_window_new(GtkApplication *app, Worker *worker) {
     adw_preferences_page_set_title(page, "Settings");
     adw_preferences_page_set_icon_name(page, "preferences-system-symbolic");
     adw_preferences_window_add(win->pref_win, page);
+
+    /* About / Credits Page */
+    build_about_page(win);
 
     /* --- GROUP 1: Device Configuration --- */
     AdwPreferencesGroup *dev_group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());

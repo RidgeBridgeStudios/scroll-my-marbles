@@ -15,7 +15,7 @@
 #include "ui/tray.h"
 
 #define APP_ID "org.ridgebridgestudios.scrollmymarbles"
-#define APP_VERSION "1.0.0"
+/* APP_VERSION is supplied by the build system (meson project version). */
 
 typedef struct {
     AdwApplication *app;
@@ -68,10 +68,9 @@ static void on_tray_settings(void *user_data) {
 
 static void on_tray_about(void *user_data) {
     AppContext *ctx = (AppContext *)user_data;
-    GtkWindow *parent = NULL;
-    if (ctx->settings_win)
-        parent = settings_window_get_window(ctx->settings_win);
-    settings_window_show_about(parent);
+    if (ctx->settings_win) {
+        settings_window_show_about_page(ctx->settings_win);
+    }
 }
 
 static void on_tray_quit(void *user_data) {
