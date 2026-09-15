@@ -94,7 +94,7 @@ curl -fsSL https://raw.githubusercontent.com/RidgeBridgeStudios/scroll-my-marble
 ### 📦 Option 2: Download & Install the `.deb` Package (Ubuntu, Debian, Linux Mint, Zorin OS, Pop!_OS)
 
 1. Open the **[GitHub Releases Tab](https://github.com/RidgeBridgeStudios/scroll-my-marbles/releases)**.
-2. Under **Assets**, click to download **`scroll-my-marbles_1.1.0_amd64.deb`**.
+2. Under **Assets**, click to download **`scroll-my-marbles_1.2.0_amd64.deb`**.
 3. Install it using either method:
    - **Graphical**: Double-click the downloaded `.deb` file to open it in your Software Center / App Center, then click **Install**.
    - **Terminal**: Open the folder where the file downloaded (e.g. `Downloads`) and run:
@@ -160,8 +160,8 @@ Run the automated build script to compile, run tests, and produce packages:
 ./build.sh
 ```
 This generates:
-- `scroll-my-marbles_1.1.0_amd64.deb`
-- `scroll-my-marbles-1.1.0-linux-x86_64.tar.gz`
+- `scroll-my-marbles_1.2.0_amd64.deb`
+- `scroll-my-marbles-1.2.0-linux-x86_64.tar.gz`
 - `SHA256SUMS.txt`
 
 ### 3. Manual Build with Meson & Ninja

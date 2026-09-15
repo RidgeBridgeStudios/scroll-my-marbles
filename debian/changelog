@@ -1,3 +1,12 @@
+scroll-my-marbles (1.2.0) stable; urgency=medium
+
+  * Add in-app About page with RidgeBridge Studios branding and credits.
+  * Ship the RidgeBridge Studios logo in the deb, portable tarball, and meson installs.
+  * Wire the tray About menu and settings About button to the new About page.
+  * Unify reported version with the meson project version (--version previously printed 1.0.0).
+
+ -- RidgeBridgeStudios <contact@example.com>  Tue, 15 Sep 2026 01:15:00 +0200
+
 scroll-my-marbles (1.1.0) stable; urgency=medium
 
   * Add out-of-the-box support for Logitech TrackMan Marble T-BC21 (046d:c408).

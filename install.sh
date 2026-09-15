@@ -6,7 +6,7 @@
 set -euo pipefail
 
 REPO="RidgeBridgeStudios/scroll-my-marbles"
-DEFAULT_VERSION="1.0.0"
+DEFAULT_VERSION="1.2.0"
 VERSION="${VERSION:-$DEFAULT_VERSION}"
 PACKAGE_NAME="scroll-my-marbles"
 PACKAGE_ARCH="amd64"
