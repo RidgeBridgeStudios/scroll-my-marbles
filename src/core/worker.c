@@ -100,10 +100,17 @@ static void *worker_thread_func(void *arg) {
                 struct input_event ev;
                 int rc = 0;
 
-                while ((rc = libevdev_next_event(ctx->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev)) == LIBEVDEV_READ_STATUS_SUCCESS ||
-                       rc == LIBEVDEV_READ_STATUS_SYNC) {
-                    scroll_engine_process_event(&w->engine, ctx, &ev);
-                }
+                do {
+                    rc = libevdev_next_event(ctx->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
+                    if (rc == LIBEVDEV_READ_STATUS_SYNC) {
+                        while (rc == LIBEVDEV_READ_STATUS_SYNC) {
+                            scroll_engine_process_event(&w->engine, ctx, &ev);
+                            rc = libevdev_next_event(ctx->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
+                        }
+                    } else if (rc == LIBEVDEV_READ_STATUS_SUCCESS) {
+                        scroll_engine_process_event(&w->engine, ctx, &ev);
+                    }
+                } while (rc == LIBEVDEV_READ_STATUS_SUCCESS || rc == LIBEVDEV_READ_STATUS_SYNC);
 
                 if (rc == -ENODEV || (fds[dev_idx].revents & (POLLERR | POLLHUP))) {
                     fprintf(stderr, "Device disconnected: %s\n", ctx->current_name);

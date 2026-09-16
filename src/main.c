@@ -81,9 +81,31 @@ static void on_tray_quit(void *user_data) {
 }
 
 static void on_app_startup(GApplication *app, gpointer user_data) {
-    (void)user_data;
+    AppContext *ctx = (AppContext *)user_data;
+
     /* Hold application refcount so the process remains running even with no visible windows */
     g_application_hold(app);
+
+    /* Start background input worker thread exclusively in the primary instance */
+    if (!worker_start(&ctx->worker, &ctx->config, on_worker_status_changed, ctx)) {
+        fprintf(stderr, "Warning: failed to start input worker immediately. Will retry in background.\n");
+    }
+
+    /* Initialize System Tray via DBus StatusNotifierItem */
+    TrayCallbacks tray_cbs = {
+        .on_settings = on_tray_settings,
+        .on_about = on_tray_about,
+        .on_quit = on_tray_quit
+    };
+    ctx->tray = tray_init(&tray_cbs, ctx);
+
+    char dev_name[256] = {0};
+    char dev_path[PATH_MAX] = {0};
+    bool connected = worker_is_connected(&ctx->worker);
+    worker_get_device_info(&ctx->worker, dev_name, sizeof(dev_name), dev_path, sizeof(dev_path));
+    if (ctx->tray) {
+        tray_set_connected_status(ctx->tray, connected, dev_name);
+    }
 }
 
 static void on_app_activate(GApplication *app, gpointer user_data) {
@@ -94,7 +116,7 @@ static void on_app_activate(GApplication *app, gpointer user_data) {
         ctx->settings_win = settings_window_new(GTK_APPLICATION(ctx->app), &ctx->worker);
     }
 
-    if (ctx->show_settings_on_start) {
+    if (ctx->show_settings_on_start || ctx->settings_win) {
         settings_window_present(ctx->settings_win);
     }
 }
@@ -187,7 +209,12 @@ static int run_test_mode(const char *override_device) {
     struct input_event ev;
     while (1) {
         int rc = libevdev_next_event(ctx->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-        if (rc == LIBEVDEV_READ_STATUS_SUCCESS || rc == LIBEVDEV_READ_STATUS_SYNC) {
+        if (rc == LIBEVDEV_READ_STATUS_SYNC) {
+            while (rc == LIBEVDEV_READ_STATUS_SYNC) {
+                scroll_engine_process_event(&engine, ctx, &ev);
+                rc = libevdev_next_event(ctx->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
+            }
+        } else if (rc == LIBEVDEV_READ_STATUS_SUCCESS) {
             if (ev.type == EV_KEY && ev.code == cfg.scroll_button) {
                 printf("[TEST] Scroll button %s %s\n",
                        config_button_code_to_name(ev.code),
@@ -259,32 +286,11 @@ int main(int argc, char *argv[]) {
 
     g_app_ctx.show_settings_on_start = force_settings || (!start_in_tray);
 
-    /* Start background input worker thread */
-    if (!worker_start(&g_app_ctx.worker, &g_app_ctx.config, on_worker_status_changed, &g_app_ctx)) {
-        fprintf(stderr, "Warning: failed to start input worker immediately. Will retry in background.\n");
-    }
-
     /* Initialize GTK4 / Libadwaita Application */
     g_app_ctx.app = adw_application_new(APP_ID, G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(g_app_ctx.app, "startup", G_CALLBACK(on_app_startup), &g_app_ctx);
     g_signal_connect(g_app_ctx.app, "activate", G_CALLBACK(on_app_activate), &g_app_ctx);
     g_signal_connect(g_app_ctx.app, "shutdown", G_CALLBACK(on_app_shutdown), &g_app_ctx);
-
-    /* Initialize System Tray via DBus StatusNotifierItem */
-    TrayCallbacks tray_cbs = {
-        .on_settings = on_tray_settings,
-        .on_about = on_tray_about,
-        .on_quit = on_tray_quit
-    };
-    g_app_ctx.tray = tray_init(&tray_cbs, &g_app_ctx);
-
-    char dev_name[256] = {0};
-    char dev_path[PATH_MAX] = {0};
-    bool connected = worker_is_connected(&g_app_ctx.worker);
-    worker_get_device_info(&g_app_ctx.worker, dev_name, sizeof(dev_name), dev_path, sizeof(dev_path));
-    if (g_app_ctx.tray) {
-        tray_set_connected_status(g_app_ctx.tray, connected, dev_name);
-    }
 
     int status = g_application_run(G_APPLICATION(g_app_ctx.app), 0, NULL);
     g_object_unref(g_app_ctx.app);

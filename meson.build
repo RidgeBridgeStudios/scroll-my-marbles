@@ -1,7 +1,7 @@
 project(
   'scroll-my-marbles',
   'c',
-  version: '1.2.1',
+  version: '1.2.2',
   license: 'MIT',
   default_options: [
     'c_std=c11',
