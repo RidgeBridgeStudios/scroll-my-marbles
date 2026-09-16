@@ -165,9 +165,27 @@ void settings_window_update_device_status(SettingsWindow *win, bool connected, c
         adw_action_row_set_subtitle(win->status_row, subtitle);
         adw_action_row_set_icon_name(win->status_row, "emblem-ok-symbolic");
     } else {
-        adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->status_row), "Status: Waiting for Device");
-        adw_action_row_set_subtitle(win->status_row, "Searching for Logitech USB Trackball in /dev/input...");
-        adw_action_row_set_icon_name(win->status_row, "process-working-symbolic");
+        bool trackball_in_proc = false;
+        char trackball_name[256] = {0};
+        int perm_errors = device_check_permissions(&trackball_in_proc, trackball_name, sizeof(trackball_name));
+
+        if (perm_errors > 0 && trackball_in_proc) {
+            char subtitle[320];
+            snprintf(subtitle, sizeof(subtitle),
+                     "Detected %s, but permission denied on /dev/input. Ensure 70-scroll-my-marbles.rules is active.",
+                     trackball_name[0] ? trackball_name : "Logitech Trackball");
+            adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->status_row), "Status: Permission Denied");
+            adw_action_row_set_subtitle(win->status_row, subtitle);
+            adw_action_row_set_icon_name(win->status_row, "dialog-warning-symbolic");
+        } else if (perm_errors > 0) {
+            adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->status_row), "Status: Permission Denied");
+            adw_action_row_set_subtitle(win->status_row, "Cannot access /dev/input event devices. Check udev rules or user permissions.");
+            adw_action_row_set_icon_name(win->status_row, "dialog-warning-symbolic");
+        } else {
+            adw_preferences_row_set_title(ADW_PREFERENCES_ROW(win->status_row), "Status: Waiting for Device");
+            adw_action_row_set_subtitle(win->status_row, "Searching for Logitech USB Trackball in /dev/input...");
+            adw_action_row_set_icon_name(win->status_row, "process-working-symbolic");
+        }
     }
 }
 
@@ -177,6 +195,44 @@ static void on_rescan_clicked(GtkButton *btn, gpointer user_data) {
     win->updating_ui = true;
     populate_devices(win);
     win->updating_ui = false;
+
+    if (win->worker) {
+        worker_trigger_rescan(win->worker);
+    }
+
+    char dev_name[256] = {0};
+    char dev_path[PATH_MAX] = {0};
+    bool connected = win->worker && worker_is_connected(win->worker);
+    if (win->worker) {
+        worker_get_device_info(win->worker, dev_name, sizeof(dev_name), dev_path, sizeof(dev_path));
+    }
+    settings_window_update_device_status(win, connected, dev_name, dev_path);
+
+    bool trackball_in_proc = false;
+    char tb_name[256] = {0};
+    int perm_errors = device_check_permissions(&trackball_in_proc, tb_name, sizeof(tb_name));
+
+    AdwToast *toast = NULL;
+    if (connected && dev_name[0] != '\0') {
+        char msg[320];
+        snprintf(msg, sizeof(msg), "Connected to %s (%s)", dev_name, dev_path[0] ? dev_path : "active");
+        toast = adw_toast_new(msg);
+    } else if (win->scanned_count > 0) {
+        char msg[128];
+        snprintf(msg, sizeof(msg), "Found %d input pointer device%s", win->scanned_count, win->scanned_count > 1 ? "s" : "");
+        toast = adw_toast_new(msg);
+    } else if (perm_errors > 0 && trackball_in_proc) {
+        toast = adw_toast_new("Permission Denied: Trackball detected, but /dev/input is inaccessible.");
+    } else if (perm_errors > 0) {
+        toast = adw_toast_new("Permission Denied: Cannot access /dev/input devices.");
+    } else {
+        toast = adw_toast_new("No pointer devices found in /dev/input.");
+    }
+
+    if (toast && win->pref_win) {
+        adw_toast_set_timeout(toast, 3);
+        adw_preferences_window_add_toast(win->pref_win, toast);
+    }
 }
 
 static void on_reset_defaults_clicked(GtkButton *btn, gpointer user_data) {

@@ -29,6 +29,7 @@ typedef struct DeviceContext {
 /* Device enumeration and discovery */
 int device_scan_pointers(DeviceInfo **out_list);
 void device_free_scan_list(DeviceInfo *list, int count);
+int device_check_permissions(bool *out_trackball_in_proc, char *out_trackball_name, size_t name_size);
 bool device_is_target_trackball(struct libevdev *dev);
 bool device_looks_like_trackball(struct libevdev *dev);
 

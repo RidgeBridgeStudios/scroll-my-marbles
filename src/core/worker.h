@@ -27,6 +27,7 @@ bool worker_start(Worker *w, const AppConfig *cfg, WorkerStatusCallback cb, void
 void worker_stop(Worker *w);
 void worker_reload_config(Worker *w, const AppConfig *cfg);
 bool worker_is_connected(Worker *w);
+void worker_trigger_rescan(Worker *w);
 void worker_get_device_info(Worker *w, char *out_name, size_t name_size, char *out_path, size_t path_size);
 
 #endif /* WORKER_H */

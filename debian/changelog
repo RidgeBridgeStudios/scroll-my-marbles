@@ -1,3 +1,12 @@
+scroll-my-marbles (1.2.1) stable; urgency=medium
+
+  * Fix udev rule ordering (renamed to 70-scroll-my-marbles.rules) so systemd uaccess grants active user ACLs before 73-seat-late.rules.
+  * Add permission error diagnostics and physical device detection in /proc/bus/input/devices.
+  * Make the 'Rescan Devices' button provide immediate AdwToast feedback and update status banner on permission denial.
+  * Trigger immediate worker thread reconnect upon clicking Rescan Devices.
+
+ -- RidgeBridgeStudios <contact@example.com>  Wed, 16 Sep 2026 23:10:00 +0200
+
 scroll-my-marbles (1.2.0) stable; urgency=medium
 
   * Add in-app About page with RidgeBridge Studios branding and credits.

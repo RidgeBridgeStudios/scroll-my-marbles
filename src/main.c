@@ -122,7 +122,23 @@ static int run_test_mode(const char *override_device) {
 
     if (count == 0) {
         printf("No pointer devices found in /dev/input!\n");
-        printf("Ensure current user has permission to read /dev/input/event*.\n");
+        bool trackball_in_proc = false;
+        char tb_name[256] = {0};
+        int perm_errors = device_check_permissions(&trackball_in_proc, tb_name, sizeof(tb_name));
+        if (perm_errors > 0 && trackball_in_proc) {
+            printf("\nDIAGNOSIS: Permission Denied!\n");
+            printf("A %s was detected in /proc/bus/input/devices,\n", tb_name[0] ? tb_name : "Logitech Trackball");
+            printf("but %d device node(s) in /dev/input/ could not be opened due to lack of user permissions.\n\n", perm_errors);
+            printf("To fix this, activate 70-scroll-my-marbles.rules:\n");
+            printf("  sudo mv /lib/udev/rules.d/99-scroll-my-marbles.rules /lib/udev/rules.d/70-scroll-my-marbles.rules 2>/dev/null || \\\n");
+            printf("  sudo cp data/70-scroll-my-marbles.rules /lib/udev/rules.d/\n");
+            printf("  sudo udevadm control --reload-rules && sudo udevadm trigger\n\n");
+        } else if (perm_errors > 0) {
+            printf("\nDIAGNOSIS: Permission Denied on %d device node(s) in /dev/input/.\n", perm_errors);
+            printf("Ensure 70-scroll-my-marbles.rules is installed or user is in 'input' group.\n\n");
+        } else {
+            printf("Ensure current user has permission to read /dev/input/event*.\n");
+        }
         return 1;
     }
 

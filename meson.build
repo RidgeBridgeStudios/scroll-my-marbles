@@ -1,7 +1,7 @@
 project(
   'scroll-my-marbles',
   'c',
-  version: '1.2.0',
+  version: '1.2.1',
   license: 'MIT',
   default_options: [
     'c_std=c11',
@@ -58,7 +58,7 @@ install_data(
 
 # Udev rule
 install_data(
-  'data/99-scroll-my-marbles.rules',
+  'data/70-scroll-my-marbles.rules',
   install_dir: '/lib/udev/rules.d',
 )
 

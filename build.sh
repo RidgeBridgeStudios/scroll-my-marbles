@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_NAME="scroll-my-marbles"
-PACKAGE_VERSION="1.2.0"
+PACKAGE_VERSION="1.2.1"
 PACKAGE_ARCH="amd64"
 PACKAGE_FULLNAME="${PACKAGE_NAME}_${PACKAGE_VERSION}_${PACKAGE_ARCH}"
 DEB_FILE="${SCRIPT_DIR}/${PACKAGE_FULLNAME}.deb"
@@ -62,7 +62,7 @@ cp -a "${BUILD_DIR}/scroll-my-marbles" "${STAGING_DIR}/usr/bin/"
 
 # Install desktop entry, udev rule and branding asset
 cp -a "${SCRIPT_DIR}/data/scroll-my-marbles.desktop" "${STAGING_DIR}/usr/share/applications/"
-cp -a "${SCRIPT_DIR}/data/99-scroll-my-marbles.rules" "${STAGING_DIR}/lib/udev/rules.d/"
+cp -a "${SCRIPT_DIR}/data/70-scroll-my-marbles.rules" "${STAGING_DIR}/lib/udev/rules.d/"
 cp -a "${SCRIPT_DIR}/data/branding/ridgebridge-studios.png" "${STAGING_DIR}/usr/share/scroll-my-marbles/"
 
 # Install icons
@@ -125,7 +125,7 @@ cp -a "${BUILD_DIR}/scroll-my-marbles" "${TAR_STAGING}/bin/"
 cp -a "${SCRIPT_DIR}/data/scroll-my-marbles.desktop" "${TAR_STAGING}/share/applications/"
 cp -r "${SCRIPT_DIR}/data/icons/hicolor" "${TAR_STAGING}/share/icons/"
 cp -a "${SCRIPT_DIR}/data/branding/ridgebridge-studios.png" "${TAR_STAGING}/share/scroll-my-marbles/"
-cp -a "${SCRIPT_DIR}/data/99-scroll-my-marbles.rules" "${TAR_STAGING}/udev/"
+cp -a "${SCRIPT_DIR}/data/70-scroll-my-marbles.rules" "${TAR_STAGING}/udev/"
 cp -a "${SCRIPT_DIR}/install.sh" "${TAR_STAGING}/"
 cp -a "${SCRIPT_DIR}/README.md" "${TAR_STAGING}/"
 cp -a "${SCRIPT_DIR}/LICENSE" "${TAR_STAGING}/"

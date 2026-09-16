@@ -251,6 +251,12 @@ bool worker_is_connected(Worker *w) {
     return connected;
 }
 
+void worker_trigger_rescan(Worker *w) {
+    if (!w || !w->running || w->stop_event_fd < 0) return;
+    uint64_t val = 1;
+    write(w->stop_event_fd, &val, sizeof(val));
+}
+
 void worker_get_device_info(Worker *w, char *out_name, size_t name_size, char *out_path, size_t path_size) {
     if (!w) return;
     pthread_mutex_lock(&w->lock);

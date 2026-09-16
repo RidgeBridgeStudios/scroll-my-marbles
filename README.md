@@ -94,7 +94,7 @@ curl -fsSL https://raw.githubusercontent.com/RidgeBridgeStudios/scroll-my-marble
 ### 📦 Option 2: Download & Install the `.deb` Package (Ubuntu, Debian, Linux Mint, Zorin OS, Pop!_OS)
 
 1. Open the **[GitHub Releases Tab](https://github.com/RidgeBridgeStudios/scroll-my-marbles/releases)**.
-2. Under **Assets**, click to download **`scroll-my-marbles_1.2.0_amd64.deb`**.
+2. Under **Assets**, click to download **`scroll-my-marbles_1.2.1_amd64.deb`**.
 3. Install it using either method:
    - **Graphical**: Double-click the downloaded `.deb` file to open it in your Software Center / App Center, then click **Install**.
    - **Terminal**: Open the folder where the file downloaded (e.g. `Downloads`) and run:
@@ -114,7 +114,7 @@ curl -fsSL https://raw.githubusercontent.com/RidgeBridgeStudios/scroll-my-marble
 2. **Device Detection & Kernel Name**:
    - The Logitech TrackMan Marble T-BC21 identifies over USB with VID:PID `046d:c408`. In the Linux kernel, its device name is `"Logitech USB Trackball"` (or `"USB Trackball"`). Scroll My Marbles automatically detects and binds to this device out of the box using its USB VID/PID.
 3. **Device Permission Setup (Important)**:
-   - The installer automatically configures hardware rules (`/lib/udev/rules.d/99-scroll-my-marbles.rules`).
+   - The installer automatically configures hardware rules (`/lib/udev/rules.d/70-scroll-my-marbles.rules`).
    - If scrolling doesn't respond on your very first run, simply **unplug and reconnect your trackball** (or log out and back in) so Linux refreshes its device permissions.
 4. **Tray Icon & Autostart on Login**:
    - Scroll My Marbles runs in your system tray / notification area.
@@ -160,8 +160,8 @@ Run the automated build script to compile, run tests, and produce packages:
 ./build.sh
 ```
 This generates:
-- `scroll-my-marbles_1.2.0_amd64.deb`
-- `scroll-my-marbles-1.2.0-linux-x86_64.tar.gz`
+- `scroll-my-marbles_1.2.1_amd64.deb`
+- `scroll-my-marbles-1.2.1-linux-x86_64.tar.gz`
 - `SHA256SUMS.txt`
 
 ### 3. Manual Build with Meson & Ninja
@@ -176,28 +176,29 @@ sudo ninja -C build install
 
 ## Permissions & Udev Configuration
 
-To allow running as a normal user without `sudo`, the udev rule (`/lib/udev/rules.d/99-scroll-my-marbles.rules`) grants access to `/dev/uinput` and the physical input devices:
+To allow running as a normal user without `sudo`, the udev rule (`/lib/udev/rules.d/70-scroll-my-marbles.rules`) grants access to `/dev/uinput` and the physical input devices:
 
 ```udev
 KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
 
 # Logitech TrackMan Marble T-BC21 ("Marble Mouse", 4-button) USB VID:PID
-SUBSYSTEM=="input", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c408", TAG+="uaccess", ENV{ID_INPUT_TRACKBALL}="1"
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c408", TAG+="uaccess"
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", ATTRS{id/vendor}=="046d", ATTRS{id/product}=="c408", TAG+="uaccess"
 
 # Logitech TrackMan Marble FX USB VID:PID
-SUBSYSTEM=="input", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c401", TAG+="uaccess", ENV{ID_INPUT_TRACKBALL}="1"
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c401", TAG+="uaccess"
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", ATTRS{id/vendor}=="046d", ATTRS{id/product}=="c401", TAG+="uaccess"
 
 # Fallback name and attribute matching
-SUBSYSTEM=="input", ATTRS{name}=="*TrackMan Marble*", TAG+="uaccess"
-SUBSYSTEM=="input", ATTRS{name}=="*Marble FX*", TAG+="uaccess"
-SUBSYSTEM=="input", ATTRS{name}=="*Logitech TrackMan*", TAG+="uaccess"
-SUBSYSTEM=="input", ATTRS{name}=="*Trackball*", TAG+="uaccess"
-SUBSYSTEM=="input", ENV{ID_INPUT_TRACKBALL}=="1", TAG+="uaccess"
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", ENV{ID_INPUT_TRACKBALL}=="1", TAG+="uaccess"
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", ATTRS{name}=="*USB Trackball*", TAG+="uaccess"
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", ATTRS{name}=="*TrackMan*", TAG+="uaccess"
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", ATTRS{name}=="*Marble*", TAG+="uaccess"
 ```
 
 If you installed manually from source without the package:
 ```bash
-sudo cp data/99-scroll-my-marbles.rules /lib/udev/rules.d/
+sudo cp data/70-scroll-my-marbles.rules /lib/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 

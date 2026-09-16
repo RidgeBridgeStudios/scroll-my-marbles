@@ -176,6 +176,78 @@ void device_free_scan_list(DeviceInfo *list, int count) {
     }
 }
 
+int device_check_permissions(bool *out_trackball_in_proc, char *out_trackball_name, size_t name_size) {
+    if (out_trackball_in_proc) *out_trackball_in_proc = false;
+    if (out_trackball_name && name_size > 0) out_trackball_name[0] = '\0';
+
+    int perm_denied = 0;
+    DIR *dir = opendir("/dev/input");
+    if (dir) {
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (strncmp(entry->d_name, "event", 5) != 0) continue;
+            char path[PATH_MAX];
+            snprintf(path, sizeof(path), "/dev/input/%s", entry->d_name);
+            int fd = open(path, O_RDONLY | O_NONBLOCK);
+            if (fd < 0) {
+                if (errno == EACCES || errno == EPERM) {
+                    perm_denied++;
+                }
+            } else {
+                close(fd);
+            }
+        }
+        closedir(dir);
+    }
+
+    FILE *f = fopen("/proc/bus/input/devices", "r");
+    if (f) {
+        char line[512];
+        char cur_name[256] = {0};
+        bool cur_is_trackball = false;
+
+        while (fgets(line, sizeof(line), f)) {
+            if (strncmp(line, "I: ", 3) == 0) {
+                if (strstr(line, "Vendor=046d") &&
+                    (strstr(line, "Product=c408") || strstr(line, "Product=c401"))) {
+                    cur_is_trackball = true;
+                }
+            } else if (strncmp(line, "N: Name=", 8) == 0) {
+                char *start = strchr(line, '"');
+                if (start) {
+                    start++;
+                    char *end = strchr(start, '"');
+                    if (end) *end = '\0';
+                    strncpy(cur_name, start, sizeof(cur_name) - 1);
+                    if (strcasestr(cur_name, "TrackMan") ||
+                        strcasestr(cur_name, "Trackball") ||
+                        strcasestr(cur_name, "Marble")) {
+                        cur_is_trackball = true;
+                    }
+                }
+            } else if (line[0] == '\n' || line[0] == '\r') {
+                if (cur_is_trackball) {
+                    if (out_trackball_in_proc) *out_trackball_in_proc = true;
+                    if (out_trackball_name && name_size > 0 && cur_name[0] != '\0') {
+                        strncpy(out_trackball_name, cur_name, name_size - 1);
+                    }
+                }
+                cur_name[0] = '\0';
+                cur_is_trackball = false;
+            }
+        }
+        if (cur_is_trackball) {
+            if (out_trackball_in_proc) *out_trackball_in_proc = true;
+            if (out_trackball_name && name_size > 0 && cur_name[0] != '\0') {
+                strncpy(out_trackball_name, cur_name, name_size - 1);
+            }
+        }
+        fclose(f);
+    }
+
+    return perm_denied;
+}
+
 DeviceContext *device_open_and_grab(const char *preferred_path, const char *preferred_name) {
     char target_path[PATH_MAX] = {0};
     char target_name[256] = {0};
@@ -274,7 +346,7 @@ DeviceContext *device_open_and_grab(const char *preferred_path, const char *pref
         if (fd < 0) {
             fprintf(stderr, "Failed to open device %s: %s\n", target_path, strerror(errno));
             if (errno == EACCES) {
-                fprintf(stderr, "Permission denied. Ensure udev rule 99-scroll-my-marbles.rules is installed,\n"
+                fprintf(stderr, "Permission denied. Ensure udev rule 70-scroll-my-marbles.rules is installed,\n"
                                 "or current user is in 'input' group.\n");
             }
             return NULL;

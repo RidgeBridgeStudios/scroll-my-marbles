@@ -6,7 +6,7 @@
 set -euo pipefail
 
 REPO="RidgeBridgeStudios/scroll-my-marbles"
-DEFAULT_VERSION="1.2.0"
+DEFAULT_VERSION="1.2.1"
 VERSION="${VERSION:-$DEFAULT_VERSION}"
 PACKAGE_NAME="scroll-my-marbles"
 PACKAGE_ARCH="amd64"
@@ -71,6 +71,8 @@ do_uninstall() {
         echo "Removing installed files manually..."
         sudo rm -f "/usr/bin/${PACKAGE_NAME}"
         sudo rm -f "/usr/share/applications/${PACKAGE_NAME}.desktop"
+        sudo rm -f "/lib/udev/rules.d/70-scroll-my-marbles.rules"
+        sudo rm -f "/usr/lib/udev/rules.d/70-scroll-my-marbles.rules"
         sudo rm -f "/lib/udev/rules.d/99-scroll-my-marbles.rules"
         sudo rm -f "/usr/lib/udev/rules.d/99-scroll-my-marbles.rules"
         sudo rm -rf "/usr/share/icons/hicolor"/*/apps/"${PACKAGE_NAME}".*
